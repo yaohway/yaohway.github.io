@@ -719,7 +719,7 @@ a.twitter:hover i{
 	background:url(../images/img-sp.png) no-repeat -29px -198px;
     display: block;
 }
-a.g i{
+a.github i{
 	background:url(../images/img-sp.png) no-repeat -73px -158px;
     display: block;
     width: 30px;
@@ -730,11 +730,11 @@ a.g i{
     transition: 0.5s ease-in;
 	-ms-transition: 0.5s ease-in;
 }
-a.g:hover i{
+a.github:hover i{
 	background:url(../images/img-sp.png) no-repeat -73px -198px;
     display: block;
 }
-a.p i{
+a.linkedin i{
 	background:url(../images/img-sp.png) no-repeat -113px -159px;
     display: block;
     width: 30px;
@@ -745,7 +745,7 @@ a.p i{
     transition: 0.5s ease-in;
 	-ms-transition: 0.5s ease-in;
 }
-a.p:hover i{
+a.linkedin:hover i{
 	background:url(../images/img-sp.png) no-repeat -113px -199px;
     display: block;
 }
