@@ -1,0 +1,19 @@
+{{ define "main" }}
+  <article>
+    <time datetime="{{ .Date.Format "2006-01-02T15:04:05Z07:00" }}">{{ .Date.Format "2 January 2006" }}</time>
+    <h1>{{ .Title }}</h1>
+    <p class="summary">{{ .Summary | plainify }}</p>
+    <dl class="metadata">
+      {{ range slice "series" "tags" }}
+        {{ $taxonomy := . }}
+        {{ with $.GetTerms . }}
+          <div>
+            <dt>{{ title $taxonomy }}</dt>
+            <dd>{{ range $i, $term := . }}{{ if $i }}, {{ end }}<a href="{{ $term.RelPermalink }}">{{ $term.LinkTitle }}</a>{{ end }}</dd>
+          </div>
+        {{ end }}
+      {{ end }}
+    </dl>
+    <div class="prose">{{ .Content }}</div>
+  </article>
+{{ end }}

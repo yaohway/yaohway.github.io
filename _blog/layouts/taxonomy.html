@@ -1,0 +1,12 @@
+{{ define "main" }}
+  <h1>{{ .Title }}</h1>
+  {{ with .Pages.ByTitle }}
+    <ul class="terms">
+      {{ range . }}
+        <li><a href="{{ .RelPermalink }}">{{ .LinkTitle }}</a> <span>({{ len .RegularPages }})</span></li>
+      {{ end }}
+    </ul>
+  {{ else }}
+    <p>No {{ lower .Title }} yet.</p>
+  {{ end }}
+{{ end }}

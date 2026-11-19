@@ -1,0 +1,30 @@
+name: Blog build and QA
+
+"on":
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  preview:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0 # QA compares files with the original public-site commit.
+          persist-credentials: false
+      - name: Extract verified Hugo release
+        run: python3 -B _blog/support/hugo.py "$RUNNER_TEMP/blog-tools/hugo"
+      - name: Build the combined public site
+        run: python3 -B _blog/support/build.py --hugo "$RUNNER_TEMP/blog-tools/hugo" --output "$RUNNER_TEMP/site-preview"
+      - name: Check original routes, post rendering and collisions
+        run: python3 -B _blog/support/qa.py --hugo "$RUNNER_TEMP/blog-tools/hugo" --site "$RUNNER_TEMP/site-preview"
+      - name: Upload reviewed preview directory
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: site-preview
+          path: ${{ runner.temp }}/site-preview/
+          if-no-files-found: error
+          retention-days: 7
