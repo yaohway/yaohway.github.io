@@ -79,3 +79,7 @@ The browser checks used real Chromium layout and scrolling under mobile emulatio
 ## Independent live-site preservation check
 
 After local worker QA, the coordinator fetched the currently served public `index.html`, `cv.html`, `publications.html`, and `research.html` over HTTPS on 19 November 2026. Each response matched its original tracked file byte-for-byte by SHA-256. This confirms that copying the existing HTML preserves its current rendered source rather than substituting unbuilt generator input. No remote deployment or Pages configuration change was made.
+
+## Guarded production-workflow revision
+
+The original local report above tested the preview-only version. The subsequent reviewed revision adds `master` push and optional dispatch deployment code, but this draft PR has not been merged or deployed. Local YAML parsing confirms read-only build permissions, only Pages/OIDC write permissions in the dependent deployment job, and the `github-pages` environment. The guard truth table covers 36 repository/ref/event combinations; only exact-repository `master` pushes and manual dispatches qualify. The deploy preflight rejects legacy Pages mode without changing it. PR events skip both Pages packaging and deployment. Official upload-pages-artifact v4 and deploy-pages v4 commit pins were resolved directly from their upstream GitHub repositories. The unchanged combined builder and QA are rerun for this revision. Actual production deployment remains untested until owner cutover.
