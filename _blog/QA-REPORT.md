@@ -75,3 +75,7 @@ orca eval --page "$page_id" --expression "$(cat _blog/support/mobile-qa.js)" --j
 ## Verification limits
 
 The browser checks used real Chromium layout and scrolling under mobile emulation. Physical phones and mobile Safari were outside this run. HTTP evidence covers local artifact routes and bytes. GitHub-hosted Actions, Pages CDN behavior, and the administrator cutover and rollback were not exercised. The implementation ends at a local review artifact. The separate publishing procedure is in the [administrator runbook](README.md#administrator-cutover-to-actions).
+
+## Independent live-site preservation check
+
+After local worker QA, the coordinator fetched the currently served public `index.html`, `cv.html`, `publications.html`, and `research.html` over HTTPS on 19 November 2026. Each response matched its original tracked file byte-for-byte by SHA-256. This confirms that copying the existing HTML preserves its current rendered source rather than substituting unbuilt generator input. No remote deployment or Pages configuration change was made.

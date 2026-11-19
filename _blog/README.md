@@ -40,7 +40,7 @@ Each post is a Markdown file directly inside `_blog/content/`. The reserved `_in
 
 Write the body below the TOML front matter. Use fenced code labels `cpp` or `c++`, `coq`, `rocq`, and `bash`. The Rocq render hook selects the Coq lexer. Code blocks scroll horizontally on narrow screens. [Hugo syntax highlighting](https://gohugo.io/content-management/syntax-highlighting/)
 
-The production build excludes drafts and future-dated posts. Draft source committed to this public repository is still readable on GitHub. QA creates its own public and draft Markdown under a temporary directory. An optional `--browser-site "$work/browser"` on the QA command retains the rendered test blog separately for inspection. Serve that directory on loopback and open `/blog/qa-wide/` to repeat the phone checks in [QA-REPORT.md](QA-REPORT.md).
+The production build excludes drafts and future-dated posts. Draft source committed to this public repository is still readable on GitHub. Keep unpublished drafts in your private writing workspace or private local files, not in this public repository. The `draft` flag controls rendering, not confidentiality. QA creates its own public and draft Markdown under a temporary directory. An optional `--browser-site "$work/browser"` on the QA command retains the rendered test blog separately for inspection. Serve that directory on loopback and open `/blog/qa-wide/` to repeat the phone checks in [QA-REPORT.md](QA-REPORT.md).
 
 ## Current GitHub Pages behavior
 
