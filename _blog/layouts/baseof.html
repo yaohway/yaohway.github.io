@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ if .IsHome }}{{ site.Title }}{{ else }}{{ .Title }} · {{ site.Title }}{{ end }}</title>
+  {{ if .IsPage }}<meta name="description" content="{{ .Summary | plainify }}">{{ end }}
+  <link rel="canonical" href="{{ .Permalink }}">
+  <link rel="stylesheet" href="{{ "blog.css" | relURL }}">
+  {{ with site.Home.OutputFormats.Get "rss" }}
+  <link rel="alternate" type="{{ .MediaType.Type }}" href="{{ .RelPermalink }}" title="{{ site.Title }}">
+  {{ end }}
+</head>
+<body>
+  <header>
+    <a class="author" href="/">Yaohui Chen</a>
+    <nav aria-label="Blog navigation">
+      <a href="{{ site.Home.RelPermalink }}"{{ if .IsHome }} aria-current="page"{{ end }}>Blog</a>
+      {{ range slice "series" "tags" }}
+        {{ with site.GetPage (printf "/%s" .) }}
+          <a href="{{ .RelPermalink }}"{{ if eq .RelPermalink $.RelPermalink }} aria-current="page"{{ end }}>{{ .LinkTitle }}</a>
+        {{ end }}
+      {{ end }}
+      {{ with site.Home.OutputFormats.Get "rss" }}<a href="{{ .RelPermalink }}">RSS</a>{{ end }}
+    </nav>
+  </header>
+  <main>{{ block "main" . }}{{ end }}</main>
+</body>
+</html>
