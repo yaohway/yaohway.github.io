@@ -118,7 +118,7 @@
 <p><strong>Answers.</strong> What &ldquo;proved&rdquo; means for C++. Layers, matching, and gaps.</p>
 <h2 id="0-question">0. Question</h2>
 <ul>
-<li>The toy program in this series is ByteStore, a checked byte store in C++17. Source file is <a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/checked_store.hpp"><code>checked_store.hpp</code></a>.</li>
+<li>The toy program in this series is ByteStore, a checked byte store in C++17. Source file is <a href="https://github.com/evanmak/security-patch-proof-artifacts/blob/ce76750a88bf0a164007693402ff208c2b7dcc10/experiments/03-memory-safety/checked_store.hpp"><code>checked_store.hpp</code></a>.</li>
 <li>&ldquo;You proved it in Rocq, so the C++ is correct?&rdquo; A proof here is a <strong>chain of matches</strong>; each link is labelled proved, tested, or trusted.</li>
 </ul>
 <h2 id="1-layers">1. Layers</h2>
@@ -130,14 +130,14 @@
 <li>Matching pairs a <strong>correspondence relation</strong> with a <strong>simulation</strong> over finite histories. Both sides return the same value and end in matching post states.</li>
 <li>Posts 02 and 03 prove the match between the abstract model and the implementation-shaped model. Theorems: <code>write_simulation</code> and <code>history_simulation</code>.</li>
 <li>Implementation-shaped model and C++ connect through <strong>translation</strong> with cpp2v and BRiCk. Checked today are method entry, the guard rule, and branch and return structure.</li>
-<li><a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/brick-write-proof/WriteRefinement.v"><code>WriteRefinement.checked_write_refines_model</code></a> is independently checked in Rocq. The translated C++ write agrees with <code>Model.write</code> on return result and full model-observable post-state, on the modeled normal-return paths, under explicit representation and map, vector, and iterator contract assumptions. Record: <a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/brick-write-proof/FULL-VERIFICATION.md"><code>FULL-VERIFICATION.md</code></a>. Proof modules: <a href="https://github.com/evanmak/security-patch-proof/tree/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/brick-write-proof">brick-write-proof</a>.</li>
+<li><a href="https://github.com/evanmak/security-patch-proof-artifacts/blob/ce76750a88bf0a164007693402ff208c2b7dcc10/experiments/03-memory-safety/brick-write-proof/WriteRefinement.v"><code>WriteRefinement.checked_write_refines_model</code></a> is independently checked in Rocq. The translated C++ write agrees with <code>Model.write</code> on return result and full model-observable post-state, on the modeled normal-return paths, under explicit representation and map, vector, and iterator contract assumptions. Record: <a href="https://github.com/evanmak/security-patch-proof-artifacts/blob/ce76750a88bf0a164007693402ff208c2b7dcc10/experiments/03-memory-safety/brick-write-proof/FULL-VERIFICATION.md"><code>FULL-VERIFICATION.md</code></a>. Proof modules: <a href="https://github.com/evanmak/security-patch-proof-artifacts/tree/ce76750a88bf0a164007693402ff208c2b7dcc10/experiments/03-memory-safety/brick-write-proof">brick-write-proof</a>.</li>
 </ul>
 <h2 id="3-gaps-in-language-compiler-library-and-system">3. Gaps in language, compiler, library, and system</h2>
 <ul>
 <li><strong>Language.</strong> The C++ standard is prose. Proofs talk about BRiCk formal semantics. BRiCk semantics sits in the trusted base.</li>
 <li><strong>Compiler.</strong> Claims cover source. The compiler sits in the trusted base, outside the proof.</li>
 <li><strong>Library.</strong> STL <code>map</code> and <code>vector</code> behaviour enters through contracts.</li>
-<li><strong>OS and hardware.</strong> Out of scope in <a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/SPEC.md"><code>SPEC.md</code></a>.</li>
+<li><strong>OS and hardware.</strong> Out of scope in <a href="https://github.com/evanmak/security-patch-proof-artifacts/blob/ce76750a88bf0a164007693402ff208c2b7dcc10/experiments/03-memory-safety/SPEC.md"><code>SPEC.md</code></a>.</li>
 <li><strong>Discipline.</strong> Run <code>Print Assumptions</code> on every named theorem. No <code>Admitted</code>. One assumption is disclosed. BRiCk <code>compareN</code> guardedness is assumed.</li>
 </ul>
 <h2 id="4-bytestore-steps">4. ByteStore steps</h2>
@@ -207,7 +207,7 @@
 </ul>
 <p><a id="repro"></a></p>
 <h2 id="5-repro">5. Repro</h2>
-<p>Follow the <a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/artifacts/checked-store/README.md">repro guide</a> in <code>evanmak/security-patch-proof</code>, pinned at <a href="https://github.com/evanmak/security-patch-proof/commit/3167bb4b1c63cf9af2307bc1993a2c659a6f0439">commit</a>. Work in the directory that holds SPEC.md and checked_store.hpp, with Clang and Rocq 9.2.0 on PATH.</p>
+<p>Follow the <a href="https://github.com/evanmak/security-patch-proof-artifacts/blob/ce76750a88bf0a164007693402ff208c2b7dcc10/artifacts/checked-store/README.md">repro guide</a> in <code>evanmak/security-patch-proof-artifacts</code>, pinned at <a href="https://github.com/evanmak/security-patch-proof-artifacts/commit/ce76750a88bf0a164007693402ff208c2b7dcc10">commit</a>. Work in the directory that holds SPEC.md and checked_store.hpp, with Clang and Rocq 9.2.0 on PATH.</p>
 <ol>
 <li>C++ suite: <code>CXX=&quot;$(command -v clang++)&quot; bash run_cpp.sh</code></li>
 <li>Rocq check: <code>rocq compile Model.v</code>, then <code>rocq compile Representation.v</code>, then <code>rocqchk Model Representation</code>.</li>
@@ -215,10 +215,10 @@
 <p>Expected. The C++ suite passes the normal run and the ASan/UBSan run. Compilation prints assumption reports of 15 model results and 9 representation results, all closed under the global context.</p>
 <h2 id="6-work-still-open">6. Work still open</h2>
 <ul>
-<li>Proven for write, within scope. <code>checked_write_refines_model</code> is checked in Rocq for the modeled normal-return paths, under explicit representation and map, vector, and iterator contract assumptions. Record: <a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/brick-write-proof/FULL-VERIFICATION.md"><code>FULL-VERIFICATION.md</code></a>.</li>
+<li>Proven for write, within scope. <code>checked_write_refines_model</code> is checked in Rocq for the modeled normal-return paths, under explicit representation and map, vector, and iterator contract assumptions. Record: <a href="https://github.com/evanmak/security-patch-proof-artifacts/blob/ce76750a88bf0a164007693402ff208c2b7dcc10/experiments/03-memory-safety/brick-write-proof/FULL-VERIFICATION.md"><code>FULL-VERIFICATION.md</code></a>.</li>
 <li>Still not proven. The binary, the concrete standard library, and the whole store lifecycle.</li>
 </ul>
-<p><strong>Sources:</strong> <a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/SPEC.md">SPEC.md</a> · <a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/Model.v">Model.v</a> · <a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/Representation.v">Representation.v</a> · <a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/artifacts/checked-store/README.md">repro guide</a>.</p>
+<p><strong>Sources:</strong> <a href="https://github.com/evanmak/security-patch-proof-artifacts/blob/ce76750a88bf0a164007693402ff208c2b7dcc10/experiments/03-memory-safety/SPEC.md">SPEC.md</a> · <a href="https://github.com/evanmak/security-patch-proof-artifacts/blob/ce76750a88bf0a164007693402ff208c2b7dcc10/experiments/03-memory-safety/Model.v">Model.v</a> · <a href="https://github.com/evanmak/security-patch-proof-artifacts/blob/ce76750a88bf0a164007693402ff208c2b7dcc10/experiments/03-memory-safety/Representation.v">Representation.v</a> · <a href="https://github.com/evanmak/security-patch-proof-artifacts/blob/ce76750a88bf0a164007693402ff208c2b7dcc10/artifacts/checked-store/README.md">repro guide</a>.</p>
 </div>
       <nav class="series-pagination" aria-label="Series navigation">
         

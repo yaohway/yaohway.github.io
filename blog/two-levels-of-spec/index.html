@@ -119,12 +119,12 @@
 <p><strong>Answers.</strong> How the high level and implementation level specs connect, and what the proof between them gives.</p>
 <h2 id="1-two-levels-two-jobs">1. Two levels, two jobs</h2>
 <ul>
-<li><a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/SPEC.md">SPEC.md</a> states what must hold in security terms; the implementation level states preconditions, postconditions, and invariants close to code. The high level sits too far from code to check. The implementation level alone says little about security.</li>
+<li><a href="https://github.com/evanmak/security-patch-proof-artifacts/blob/ce76750a88bf0a164007693402ff208c2b7dcc10/experiments/03-memory-safety/SPEC.md">SPEC.md</a> states what must hold in security terms; the implementation level states preconditions, postconditions, and invariants close to code. The high level sits too far from code to check. The implementation level alone says little about security.</li>
 </ul>
 <h2 id="2-two-models-of-the-same-store">2. Two models of the same store</h2>
 <ul>
-<li><strong>Abstract</strong> model (<a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/Model.v">Model.v</a>): a dense list of optional buffers, tombstones for released slots. Simple to state properties over; wasteful as a data structure.</li>
-<li><strong>Implementation-shaped</strong> model (<a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/Representation.v">Representation.v</a>, 291 lines): an <code>FMapList</code> over <code>nat</code> that stores only live entries, with explicit <code>sparse_limit</code> and <code>sparse_next</code>. The shape matches the C++ <code>std::map</code>.</li>
+<li><strong>Abstract</strong> model (<a href="https://github.com/evanmak/security-patch-proof-artifacts/blob/ce76750a88bf0a164007693402ff208c2b7dcc10/experiments/03-memory-safety/Model.v">Model.v</a>): a dense list of optional buffers, tombstones for released slots. Simple to state properties over; wasteful as a data structure.</li>
+<li><strong>Implementation-shaped</strong> model (<a href="https://github.com/evanmak/security-patch-proof-artifacts/blob/ce76750a88bf0a164007693402ff208c2b7dcc10/experiments/03-memory-safety/Representation.v">Representation.v</a>, 291 lines): an <code>FMapList</code> over <code>nat</code> that stores only live entries, with explicit <code>sparse_limit</code> and <code>sparse_next</code>. The shape matches the C++ <code>std::map</code>.</li>
 <li>The counter records allocation history; map size counts live entries only, so it can sit below the counter.</li>
 </ul>
 <h2 id="3-relation-between-abstract-and-implementation-shaped">3. Relation between abstract and implementation-shaped</h2>
@@ -178,9 +178,9 @@
 <h3 id="limits">Limits</h3>
 <ul>
 <li>C++ sits outside this proof; model and code connect by translation and partial lemmas. See Post 04.</li>
-<li>Write refinement is checked (Post 04; <a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/brick-write-proof/FULL-VERIFICATION.md">verification record</a>). The binary, the concrete standard library, and the whole lifecycle stay open.</li>
+<li>Write refinement is checked (Post 04; <a href="https://github.com/evanmak/security-patch-proof-artifacts/blob/ce76750a88bf0a164007693402ff208c2b7dcc10/experiments/03-memory-safety/brick-write-proof/FULL-VERIFICATION.md">verification record</a>). The binary, the concrete standard library, and the whole lifecycle stay open.</li>
 </ul>
-<p><strong>Sources:</strong> <a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/Representation.v">Representation.v</a> · <a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/Model.v">Model.v</a> · <a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/SPEC.md">SPEC.md</a>.</p>
+<p><strong>Sources:</strong> <a href="https://github.com/evanmak/security-patch-proof-artifacts/blob/ce76750a88bf0a164007693402ff208c2b7dcc10/experiments/03-memory-safety/Representation.v">Representation.v</a> · <a href="https://github.com/evanmak/security-patch-proof-artifacts/blob/ce76750a88bf0a164007693402ff208c2b7dcc10/experiments/03-memory-safety/Model.v">Model.v</a> · <a href="https://github.com/evanmak/security-patch-proof-artifacts/blob/ce76750a88bf0a164007693402ff208c2b7dcc10/experiments/03-memory-safety/SPEC.md">SPEC.md</a>.</p>
 </div>
       <nav class="series-pagination" aria-label="Series navigation">
         

@@ -139,8 +139,8 @@
 <p>This series verifies one small C++ program end to end: ByteStore.</p>
 <p><strong>Answers.</strong> What ByteStore is, what tests establish, and what the Rocq model says.</p>
 <h2 id="1-bytestore">1. ByteStore</h2>
-<p>ByteStore&rsquo;s C++ implementation is the class <code>CheckedStore</code> in <a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/checked_store.hpp"><code>checked_store.hpp</code></a>. The class, in full:</p>
-<p><a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/checked_store.hpp">checked_store.hpp</a></p>
+<p>ByteStore&rsquo;s C++ implementation is the class <code>CheckedStore</code> in <a href="https://github.com/evanmak/security-patch-proof-artifacts/blob/ce76750a88bf0a164007693402ff208c2b7dcc10/experiments/03-memory-safety/checked_store.hpp"><code>checked_store.hpp</code></a>. The class, in full:</p>
+<p><a href="https://github.com/evanmak/security-patch-proof-artifacts/blob/ce76750a88bf0a164007693402ff208c2b7dcc10/experiments/03-memory-safety/checked_store.hpp">checked_store.hpp</a></p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#57606a">#include</span> <span style="color:#57606a">&lt;cstddef&gt;</span><span style="color:#57606a">
 </span></span></span><span style="display:flex;"><span><span style="color:#57606a">#include</span> <span style="color:#57606a">&lt;cstdint&gt;</span><span style="color:#57606a">
 </span></span></span><span style="display:flex;"><span><span style="color:#57606a">#include</span> <span style="color:#57606a">&lt;limits&gt;</span><span style="color:#57606a">
@@ -202,11 +202,11 @@
 </span></span><span style="display:flex;"><span><span style="color:#1f2328">};</span>
 </span></span></code></pre></div><h2 id="2-build-and-run">2. Build and run</h2>
 <ul>
-<li>Run <a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/run_cpp.sh"><code>run_cpp.sh</code></a>: clang++ with <code>-std=c++17 -Wall -Wextra -Wpedantic -Wconversion -Werror</code>. Build 1: <code>-O2 -DNDEBUG</code>. Build 2 uses ASan and UBSan with <code>-fno-sanitize-recover=all</code>. Build 2 is skipped only when the sanitizer probe itself does not build.</li>
+<li>Run <a href="https://github.com/evanmak/security-patch-proof-artifacts/blob/ce76750a88bf0a164007693402ff208c2b7dcc10/experiments/03-memory-safety/run_cpp.sh"><code>run_cpp.sh</code></a>: clang++ with <code>-std=c++17 -Wall -Wextra -Wpedantic -Wconversion -Werror</code>. Build 1: <code>-O2 -DNDEBUG</code>. Build 2 uses ASan and UBSan with <code>-fno-sanitize-recover=all</code>. Build 2 is skipped only when the sanitizer probe itself does not build.</li>
 <li>Tests use an explicit <code>CHECK</code> macro. The macro stays active under <code>NDEBUG</code> and exits nonzero on failure.</li>
 <li>Tests cover selected executions only. Unexecuted states are the model&rsquo;s job, section 4.</li>
 </ul>
-<h2 id="3-edge-cases-predict-from-specmd-then-run">3. Edge cases. Predict from <a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/SPEC.md">SPEC.md</a>, then run</h2>
+<h2 id="3-edge-cases-predict-from-specmd-then-run">3. Edge cases. Predict from <a href="https://github.com/evanmak/security-patch-proof-artifacts/blob/ce76750a88bf0a164007693402ff208c2b7dcc10/experiments/03-memory-safety/SPEC.md">SPEC.md</a>, then run</h2>
 <ul>
 <li><strong>Zero length buffer.</strong> Valid. No offset is accessible. Every read and write is rejected, including <code>offset = SIZE_MAX</code>.</li>
 <li><strong><code>offset == length</code>.</strong> Rejected, store unchanged. A maximal offset is also rejected.</li>
@@ -215,8 +215,8 @@
 <li><strong>Allocation exception.</strong> An oversize length throws <code>length_error</code> or <code>bad_alloc</code>. ID 1 stays available. The next successful allocation returns 1.</li>
 <li><strong>Copy semantics.</strong> <code>static_assert</code>s state that copy and move are non-constructible and non-assignable.</li>
 </ul>
-<h2 id="4-modelv-read-closely-332-lines">4. <a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/Model.v">Model.v</a> read closely. 332 lines</h2>
-<p>Excerpt from <a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/Model.v">Model.v</a>: <code>lookup</code>, <code>allocate</code>, <code>write</code>, and <code>release</code>, the definitions the theorems below state properties of.</p>
+<h2 id="4-modelv-read-closely-332-lines">4. <a href="https://github.com/evanmak/security-patch-proof-artifacts/blob/ce76750a88bf0a164007693402ff208c2b7dcc10/experiments/03-memory-safety/Model.v">Model.v</a> read closely. 332 lines</h2>
+<p>Excerpt from <a href="https://github.com/evanmak/security-patch-proof-artifacts/blob/ce76750a88bf0a164007693402ff208c2b7dcc10/experiments/03-memory-safety/Model.v">Model.v</a>: <code>lookup</code>, <code>allocate</code>, <code>write</code>, and <code>release</code>, the definitions the theorems below state properties of.</p>
 <figure class="diagram">
       <svg viewBox="0 0 460 258" role="img" aria-label="Abstract model state, animated: allocate adds ID 3 and advances next_id to 4; a write changes one byte in ID 0; release turns ID 2 into a None tombstone; a write to the released ID 2 is rejected and leaves every slot unchanged.">
         <text class="dsub" x="10" y="22" style="font-size:12px;fill:var(--diagram-ink-2)">next_id =</text>
@@ -257,7 +257,7 @@
       </svg>
       <p class="rm-cap">Steps: allocate adds ID 3 and next_id becomes 4; a write changes one byte in ID 0; release turns ID 2 into None; a write to ID 2 is rejected and leaves every slot unchanged.</p>
     </figure>
-<p><a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/Model.v">Model.v</a>, core definitions</p>
+<p><a href="https://github.com/evanmak/security-patch-proof-artifacts/blob/ce76750a88bf0a164007693402ff208c2b7dcc10/experiments/03-memory-safety/Model.v">Model.v</a>, core definitions</p>
 <div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-coq" data-lang="coq"><span style="display:flex;"><span><span style="color:#cf222e">Definition</span> lookup <span style="color:#0550ae">(</span>s <span style="color:#0550ae">:</span> store<span style="color:#0550ae">)</span> <span style="color:#0550ae">(</span>id <span style="color:#0550ae">:</span> <span style="color:#cf222e">nat</span><span style="color:#0550ae">)</span> <span style="color:#0550ae">:</span> option buffer <span style="color:#0550ae">:=</span>
 </span></span><span style="display:flex;"><span>  <span style="color:#cf222e">match</span> nth_error <span style="color:#0550ae">(</span>slots s<span style="color:#0550ae">)</span> id <span style="color:#cf222e">with</span>
 </span></span><span style="display:flex;"><span>  <span style="color:#0550ae">|</span> Some entry <span style="color:#0550ae">=&gt;</span> entry
@@ -343,7 +343,7 @@
 </ul>
 <div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-coq" data-lang="coq"><span style="display:flex;"><span><span style="color:#cf222e">Theorem</span> absent_release_preserves_store s id <span style="color:#0550ae">:</span>
 </span></span><span style="display:flex;"><span>  lookup s id <span style="color:#0550ae">=</span> None <span style="color:#0550ae">-&gt;</span> release s id <span style="color:#0550ae">=</span> <span style="color:#0550ae">(</span><span style="color:#6a737d">false</span><span style="color:#0550ae">,</span> s<span style="color:#0550ae">).</span>
-</span></span></code></pre></div><p><strong>Sources:</strong> <a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/checked_store.hpp">checked_store.hpp</a> · <a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/tests.cpp">tests.cpp</a> · <a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/run_cpp.sh">run_cpp.sh</a> · <a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/Model.v">Model.v</a>.</p>
+</span></span></code></pre></div><p><strong>Sources:</strong> <a href="https://github.com/evanmak/security-patch-proof-artifacts/blob/ce76750a88bf0a164007693402ff208c2b7dcc10/experiments/03-memory-safety/checked_store.hpp">checked_store.hpp</a> · <a href="https://github.com/evanmak/security-patch-proof-artifacts/blob/ce76750a88bf0a164007693402ff208c2b7dcc10/experiments/03-memory-safety/tests.cpp">tests.cpp</a> · <a href="https://github.com/evanmak/security-patch-proof-artifacts/blob/ce76750a88bf0a164007693402ff208c2b7dcc10/experiments/03-memory-safety/run_cpp.sh">run_cpp.sh</a> · <a href="https://github.com/evanmak/security-patch-proof-artifacts/blob/ce76750a88bf0a164007693402ff208c2b7dcc10/experiments/03-memory-safety/Model.v">Model.v</a>.</p>
 </div>
       <nav class="series-pagination" aria-label="Series navigation">
         
