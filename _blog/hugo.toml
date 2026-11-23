@@ -1,0 +1,19 @@
+baseURL = "https://yaohway.github.io/blog/"
+title = "Yaohui Chen’s Blog"
+locale = "en-US"
+timeZone = "UTC"
+disableKinds = ["section", "sitemap", "404"]
+
+[taxonomies]
+series = "series"
+tag = "tags"
+
+[outputs]
+home = ["html", "rss"]
+taxonomy = ["html"]
+term = ["html"]
+
+[markup.highlight]
+style = "github"
+noClasses = true
+lineNos = false

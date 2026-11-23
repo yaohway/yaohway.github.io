@@ -1,0 +1,17 @@
+{{ define "main" }}
+  {{ if eq .Kind "term" }}<p class="context"><a href="{{ .Parent.RelPermalink }}">{{ .Parent.LinkTitle }}</a></p>{{ end }}
+  <h1>{{ .Title }}</h1>
+  {{ with .RegularPages.ByDate.Reverse }}
+    <ol class="posts">
+      {{ range . }}
+        <li>
+          <time datetime="{{ .Date.Format "2006-01-02T15:04:05Z07:00" }}">{{ .Date.Format "2 January 2006" }}</time>
+          <h2><a href="{{ .RelPermalink }}">{{ .Title }}</a></h2>
+          <p>{{ .Summary | plainify }}</p>
+        </li>
+      {{ end }}
+    </ol>
+  {{ else }}
+    <p>No posts yet.</p>
+  {{ end }}
+{{ end }}
