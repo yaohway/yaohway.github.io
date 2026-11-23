@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Demystifying C&#43;&#43; proof: verifying a toy program, end to end · Yaohui Chen’s Blog</title>
+  <meta name="description" content="What &ldquo;proved&rdquo; means for C&#43;&#43;. Layers, matching, and gaps.">
+  <link rel="canonical" href="https://yaohway.github.io/blog/demystifying-cpp-proof/">
+  <link rel="stylesheet" href="/blog/blog.css">
+  
+  <link rel="alternate" type="application/rss&#43;xml" href="/blog/index.xml" title="Yaohui Chen’s Blog">
+  
+</head>
+<body>
+  <header>
+    <a class="author" href="/">Yaohui Chen</a>
+    <nav aria-label="Blog navigation">
+      <a href="/blog/">Blog</a>
+      
+        
+          <a href="/blog/series/">Series</a>
+        
+      
+        
+          <a href="/blog/tags/">Tags</a>
+        
+      
+      <a href="/blog/index.xml">RSS</a>
+    </nav>
+  </header>
+  <main>
+  <article>
+    <time datetime="2026-11-20T00:00:00Z">20 November 2026</time>
+    <h1>Demystifying C&#43;&#43; proof: verifying a toy program, end to end</h1>
+    <p class="summary">What &ldquo;proved&rdquo; means for C++. Layers, matching, and gaps.</p>
+    <dl class="metadata">
+      
+        
+        
+          <div>
+            <dt>Series</dt>
+            <dd><a href="/blog/series/how-c&#43;&#43;-verification-works/">How C&#43;&#43; verification works</a></dd>
+          </div>
+        
+      
+        
+        
+          <div>
+            <dt>Tags</dt>
+            <dd><a href="/blog/tags/rocq/">Rocq</a>, <a href="/blog/tags/cpp/">Cpp</a>, <a href="/blog/tags/formal-verification/">Formal-Verification</a>, <a href="/blog/tags/brick/">Brick</a></dd>
+          </div>
+        
+      
+    </dl>
+    
+    
+    
+      
+      
+      <nav class="series-nav" aria-labelledby="series-contents">
+        <h2 id="series-contents">In this series</h2>
+        <ol start="0">
+          
+            
+            
+            <li><a href="/blog/start-here/">Start here. How C&#43;&#43; verification works</a></li>
+          
+            
+            
+            <li><a href="/blog/demystifying-cpp-proof/" aria-current="page">Demystifying C&#43;&#43; proof: verifying a toy program, end to end</a></li>
+          
+            
+            
+            <li><a href="/blog/byte-store/">ByteStore. Builds, tests and edge cases</a></li>
+          
+            
+            
+            <li><a href="/blog/two-levels-of-spec/">Two levels of spec and refinement between them</a></li>
+          
+            
+            
+            <li><a href="/blog/cpp-semantics-and-tooling/">C&#43;&#43; semantics and tooling</a></li>
+          
+            
+            
+            <li><a href="/blog/what-is-proven/">What is proven, what is not. Lifetime, exhaustion, and the boundary of the check</a></li>
+          
+            
+            
+            <li><a href="/blog/harder-cases/">Open challenges. Verifying C&#43;&#43; with formal proof</a></li>
+          
+        </ol>
+      </nav>
+      <div class="prose"><style>
+.diagram{
+  --diagram-bg:#fcfcfb; --diagram-surface:#ffffff; --diagram-surface-2:#f3f4f1;
+  --diagram-ink:#161a18; --diagram-ink-2:#454d49; --diagram-ink-3:#7a837e;
+  --diagram-line:#e2e5e0; --diagram-line-strong:#c9cfc8;
+  --diagram-teal:#0e6b5e; --diagram-teal-light:#e6f2ef;
+  --diagram-rust:#9a3b1e; --diagram-rust-light:#fdf0e9;
+  --diagram-amber:#7a5f00; --diagram-amber-light:#fdf6d8;
+}
+.diagram{margin:14px 0 8px}
+.diagram svg{display:block;width:100%;height:auto}
+.dbox{fill:var(--diagram-surface);stroke:var(--diagram-line-strong)}
+.dtitle{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;font-weight:600;fill:var(--diagram-ink)}
+.dtitle-sans{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:13px;font-weight:600;fill:var(--diagram-ink)}
+.dsub{font-size:10.5px;fill:var(--diagram-ink-3)}
+.darr{stroke:var(--diagram-ink-3);stroke-width:1.5}
+.dstatus{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.st-ok{fill:var(--diagram-teal)} .st-mid{fill:var(--diagram-amber)} .st-open{fill:var(--diagram-rust)}
+@keyframes seqpulse{0%,100%{fill:var(--diagram-surface)}6%{fill:var(--diagram-teal-light)}15%{fill:var(--diagram-surface)}}
+.seq{animation:seqpulse 6.6s ease-in-out infinite}
+.diagram .flow-narrow{display:none}
+@media (max-width:620px){.diagram .flow-wide{display:none}.diagram .flow-narrow{display:block}}
+@media (prefers-reduced-motion: reduce){.diagram *{animation:none!important}}
+</style>
+<p><strong>Answers.</strong> What &ldquo;proved&rdquo; means for C++. Layers, matching, and gaps.</p>
+<h2 id="0-question">0. Question</h2>
+<ul>
+<li>The toy program in this series is ByteStore, a checked byte store in C++17. Source file is <a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/checked_store.hpp"><code>checked_store.hpp</code></a>.</li>
+<li>&ldquo;You proved it in Rocq, so the C++ is correct?&rdquo; A proof here is a <strong>chain of matches</strong>; each link is labelled proved, tested, or trusted.</li>
+</ul>
+<h2 id="1-layers">1. Layers</h2>
+<ul>
+<li>Between the spec and the compiled binary sit an abstract model, an implementation-shaped model, and the translated source. Proof, tests, and sanitizers each cover different layers.</li>
+</ul>
+<h2 id="2-how-implementation-and-model-are-matched">2. How implementation and model are matched</h2>
+<ul>
+<li>Matching pairs a <strong>correspondence relation</strong> with a <strong>simulation</strong> over finite histories. Both sides return the same value and end in matching post states.</li>
+<li>Posts 02 and 03 prove the match between the abstract model and the implementation-shaped model. Theorems: <code>write_simulation</code> and <code>history_simulation</code>.</li>
+<li>Implementation-shaped model and C++ connect through <strong>translation</strong> with cpp2v and BRiCk. Checked today are method entry, the guard rule, and branch and return structure.</li>
+<li><a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/brick-write-proof/WriteRefinement.v"><code>WriteRefinement.checked_write_refines_model</code></a> is independently checked in Rocq. The translated C++ write agrees with <code>Model.write</code> on return result and full model-observable post-state, on the modeled normal-return paths, under explicit representation and map, vector, and iterator contract assumptions. Record: <a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/brick-write-proof/FULL-VERIFICATION.md"><code>FULL-VERIFICATION.md</code></a>. Proof modules: <a href="https://github.com/evanmak/security-patch-proof/tree/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/brick-write-proof">brick-write-proof</a>.</li>
+</ul>
+<h2 id="3-gaps-in-language-compiler-library-and-system">3. Gaps in language, compiler, library, and system</h2>
+<ul>
+<li><strong>Language.</strong> The C++ standard is prose. Proofs talk about BRiCk formal semantics. BRiCk semantics sits in the trusted base.</li>
+<li><strong>Compiler.</strong> Claims cover source. The compiler sits in the trusted base, outside the proof.</li>
+<li><strong>Library.</strong> STL <code>map</code> and <code>vector</code> behaviour enters through contracts.</li>
+<li><strong>OS and hardware.</strong> Out of scope in <a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/SPEC.md"><code>SPEC.md</code></a>.</li>
+<li><strong>Discipline.</strong> Run <code>Print Assumptions</code> on every named theorem. No <code>Admitted</code>. One assumption is disclosed. BRiCk <code>compareN</code> guardedness is assumed.</li>
+</ul>
+<h2 id="4-bytestore-steps">4. ByteStore steps</h2>
+<figure class="diagram">
+      <svg class="flow-wide" viewBox="0 0 740 128" role="img" aria-label="Artifact pipeline: SPEC.md, Model.v, Representation.v, cpp2v on unchanged checked_store.hpp, checked_write.v and BRiCk lemmas, tests.cpp as conformance evidence.">
+        <defs>
+          <marker id="ahF" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--diagram-ink-3)"/></marker>
+        </defs>
+        <rect class="dbox seq" x="4" y="16" width="108" height="48" rx="8"/>
+        <text class="dtitle" x="58" y="45" text-anchor="middle">SPEC.md</text>
+        <text class="dsub" x="58" y="86" text-anchor="middle">spec</text>
+        <line class="darr" x1="114" y1="40" x2="126" y2="40" marker-end="url(#ahF)"/>
+        <rect class="dbox seq" style="animation-delay:1.1s" x="128" y="16" width="108" height="48" rx="8"/>
+        <text class="dtitle" x="182" y="45" text-anchor="middle">Model.v</text>
+        <text class="dsub" x="182" y="86" text-anchor="middle">abstract model</text>
+        <line class="darr" x1="238" y1="40" x2="250" y2="40" marker-end="url(#ahF)"/>
+        <rect class="dbox seq" style="animation-delay:2.2s" x="252" y="16" width="108" height="48" rx="8"/>
+        <text class="dtitle" x="306" y="45" text-anchor="middle" style="font-size:10.5px">Representation.v</text>
+        <text class="dsub" x="306" y="86" text-anchor="middle">implementation-</text>
+        <text class="dsub" x="306" y="100" text-anchor="middle">shaped model</text>
+        <line class="darr" x1="362" y1="40" x2="374" y2="40" marker-end="url(#ahF)"/>
+        <rect class="dbox seq" style="animation-delay:3.3s" x="376" y="16" width="108" height="48" rx="8"/>
+        <text class="dtitle" x="430" y="45" text-anchor="middle">cpp2v</text>
+        <text class="dsub" x="430" y="86" text-anchor="middle">on unchanged</text>
+        <text class="dsub" x="430" y="100" text-anchor="middle">checked_store.hpp</text>
+        <line class="darr" x1="486" y1="40" x2="498" y2="40" marker-end="url(#ahF)"/>
+        <rect class="dbox seq" style="animation-delay:4.4s" x="500" y="16" width="108" height="48" rx="8"/>
+        <text class="dtitle" x="554" y="45" text-anchor="middle" style="font-size:11px">checked_write.v</text>
+        <text class="dsub" x="554" y="86" text-anchor="middle">+ BRiCk lemmas</text>
+        <line class="darr" x1="610" y1="40" x2="622" y2="40" marker-end="url(#ahF)"/>
+        <rect class="dbox seq" style="animation-delay:5.5s" x="624" y="16" width="108" height="48" rx="8"/>
+        <text class="dtitle" x="678" y="45" text-anchor="middle">tests.cpp</text>
+        <text class="dsub" x="678" y="86" text-anchor="middle">conformance</text>
+        <text class="dsub" x="678" y="100" text-anchor="middle">evidence</text>
+      </svg>
+      <svg class="flow-narrow" viewBox="0 0 340 452" role="img" aria-label="Artifact pipeline: SPEC.md, Model.v, Representation.v, cpp2v on unchanged checked_store.hpp, checked_write.v and BRiCk lemmas, tests.cpp as conformance evidence.">
+        <defs>
+          <marker id="ahFn" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--diagram-ink-3)"/></marker>
+        </defs>
+        <rect class="dbox seq" x="20" y="6" width="300" height="46" rx="8"/>
+        <text class="dtitle" x="36" y="27">SPEC.md</text>
+        <text class="dsub" x="36" y="43">spec</text>
+        <line class="darr" x1="170" y1="54" x2="170" y2="80" marker-end="url(#ahFn)"/>
+        <rect class="dbox seq" style="animation-delay:1.1s" x="20" y="84" width="300" height="46" rx="8"/>
+        <text class="dtitle" x="36" y="105">Model.v</text>
+        <text class="dsub" x="36" y="121">abstract model</text>
+        <line class="darr" x1="170" y1="132" x2="170" y2="158" marker-end="url(#ahFn)"/>
+        <rect class="dbox seq" style="animation-delay:2.2s" x="20" y="162" width="300" height="46" rx="8"/>
+        <text class="dtitle" x="36" y="183">Representation.v</text>
+        <text class="dsub" x="36" y="199">implementation-shaped model</text>
+        <line class="darr" x1="170" y1="210" x2="170" y2="236" marker-end="url(#ahFn)"/>
+        <rect class="dbox seq" style="animation-delay:3.3s" x="20" y="240" width="300" height="46" rx="8"/>
+        <text class="dtitle" x="36" y="261">cpp2v</text>
+        <text class="dsub" x="36" y="277">on unchanged checked_store.hpp</text>
+        <line class="darr" x1="170" y1="288" x2="170" y2="314" marker-end="url(#ahFn)"/>
+        <rect class="dbox seq" style="animation-delay:4.4s" x="20" y="318" width="300" height="46" rx="8"/>
+        <text class="dtitle" x="36" y="339">checked_write.v</text>
+        <text class="dsub" x="36" y="355">+ BRiCk lemmas</text>
+        <line class="darr" x1="170" y1="366" x2="170" y2="392" marker-end="url(#ahFn)"/>
+        <rect class="dbox seq" style="animation-delay:5.5s" x="20" y="396" width="300" height="46" rx="8"/>
+        <text class="dtitle" x="36" y="417">tests.cpp</text>
+        <text class="dsub" x="36" y="433">conformance evidence</text>
+      </svg>
+    </figure>
+<ul>
+<li>Theorems a reader meets first: <code>write_live_in_bounds</code>, <code>rejected_write_preserves_store</code>, <code>write_changes_one_byte</code>, and <code>released_handle_stays_invalid</code>.</li>
+</ul>
+<p><a id="repro"></a></p>
+<h2 id="5-repro">5. Repro</h2>
+<p>Follow the <a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/artifacts/checked-store/README.md">repro guide</a> in <code>evanmak/security-patch-proof</code>, pinned at <a href="https://github.com/evanmak/security-patch-proof/commit/3167bb4b1c63cf9af2307bc1993a2c659a6f0439">commit</a>. Work in the directory that holds SPEC.md and checked_store.hpp, with Clang and Rocq 9.2.0 on PATH.</p>
+<ol>
+<li>C++ suite: <code>CXX=&quot;$(command -v clang++)&quot; bash run_cpp.sh</code></li>
+<li>Rocq check: <code>rocq compile Model.v</code>, then <code>rocq compile Representation.v</code>, then <code>rocqchk Model Representation</code>.</li>
+</ol>
+<p>Expected. The C++ suite passes the normal run and the ASan/UBSan run. Compilation prints assumption reports of 15 model results and 9 representation results, all closed under the global context.</p>
+<h2 id="6-work-still-open">6. Work still open</h2>
+<ul>
+<li>Proven for write, within scope. <code>checked_write_refines_model</code> is checked in Rocq for the modeled normal-return paths, under explicit representation and map, vector, and iterator contract assumptions. Record: <a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/brick-write-proof/FULL-VERIFICATION.md"><code>FULL-VERIFICATION.md</code></a>.</li>
+<li>Still not proven. The binary, the concrete standard library, and the whole store lifecycle.</li>
+</ul>
+<p><strong>Sources:</strong> <a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/SPEC.md">SPEC.md</a> · <a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/Model.v">Model.v</a> · <a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/Representation.v">Representation.v</a> · <a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/artifacts/checked-store/README.md">repro guide</a>.</p>
+</div>
+      <nav class="series-pagination" aria-label="Series navigation">
+        
+          
+          <a class="series-prev" rel="prev" href="/blog/start-here/"><span>Previous</span>Start here. How C&#43;&#43; verification works</a>
+        
+        
+          
+          <a class="series-next" rel="next" href="/blog/byte-store/"><span>Next</span>ByteStore. Builds, tests and edge cases</a>
+        
+      </nav>
+    
+  </article>
+</main>
+</body>
+</html>

@@ -1,0 +1,131 @@
+:root {
+  color-scheme: light;
+  --blog-ink: #202923;
+  --muted: #536158;
+  --link: #215e45;
+  --rule: #cbd5ca;
+  font-family: "STIX Two Text", Georgia, serif;
+  color: var(--blog-ink);
+  background: #fcfcf9;
+}
+
+* { box-sizing: border-box; }
+body { max-width: 48rem; margin: 0 auto; padding: 0 clamp(1rem, 5vw, 3rem) 4rem; }
+header, time, .context, .metadata, .terms span {
+  font-family: "Open Sans", system-ui, sans-serif;
+}
+header, nav { display: flex; flex-wrap: wrap; align-items: baseline; gap: .5rem 1.25rem; }
+header { justify-content: space-between; padding: 1.25rem 0; border-bottom: 2px solid var(--link); }
+nav { font-size: .9375rem; }
+a { color: var(--link); text-underline-offset: .18em; }
+a:hover { text-decoration-thickness: .12em; }
+a:focus-visible { outline: 2px solid var(--link); outline-offset: .2rem; }
+.author { color: var(--blog-ink); font-weight: 650; text-decoration: none; }
+nav [aria-current="page"] { font-weight: 700; }
+main { margin-top: clamp(2rem, 6vw, 4rem); overflow-wrap: anywhere; }
+h1, h2 { line-height: 1.15; font-weight: 500; }
+h1 { font-size: clamp(2.25rem, 6vw, 3.5rem); margin: .35rem 0 1.25rem; }
+h2 { font-size: 1.65rem; margin: .4rem 0; }
+p, .terms { font-size: 1.125rem; line-height: 1.6; }
+time, .context, .metadata, .terms span { color: var(--muted); font-size: .9375rem; }
+.posts, .terms { list-style: none; padding: 0; }
+.posts li { border-top: 1px solid var(--rule); padding: 1.35rem 0; }
+.posts p { margin: .4rem 0 0; }
+.terms li { padding: .6rem 0; border-bottom: 1px solid var(--rule); }
+.summary { font-size: 1.3rem; }
+.metadata div { display: flex; gap: .65rem; margin: .35rem 0; }
+.metadata dt { font-weight: 650; }
+.metadata dd { margin: 0; min-width: 0; }
+.prose { border-top: 1px solid var(--rule); margin-top: 1.75rem; padding-top: .5rem; line-height: 1.6; }
+.prose img { max-width: 100%; height: auto; }
+
+/* The inline diagrams have their own light and dark palettes. */
+.prose .diagram {
+  /* Raise secondary diagram tokens above WCAG floors.
+     Exported articles set --diagram-* on .diagram; this more-specific
+     rule overrides without editing article SVG or inline keyframes. */
+  --ink-3: #59645d;
+  --line-strong: var(--ink-3);
+  --diagram-ink-3: #59645d;          /* was #7a837e ≈3.91:1; ≥4.5:1 on white */
+  --diagram-line: #858c85;           /* empty-slot dash; was #e2e5e0 ≈1.24:1 */
+  --diagram-line-strong: #858c85;    /* ellipsis + card stroke; was #c9cfc8 ≈1.54:1 */
+  background-color: var(--bg, #fcfcf9);
+  color: var(--ink, var(--blog-ink));
+}
+@media (prefers-color-scheme: dark) {
+  /* Exported SVGs keep a light canvas in both appearances; only the legacy
+     --ink-3 alias tracks chrome dark. Keep --diagram-* at light-canvas values. */
+  .prose .diagram { --ink-3: #a5aea7; }
+}
+
+/* Post 01: .diagram svg {display:block} outranks .flow-narrow {display:none}. */
+.prose .diagram svg.flow-narrow { display: none; }
+@media (max-width: 620px) {
+  .prose .diagram svg.flow-wide { display: none; }
+  .prose .diagram svg.flow-narrow { display: block; }
+}
+
+/* Post 03: keep the related-connector pulse but never drop below readable opacity.
+   Inline @keyframes relpulse floors at 0.3 (≈1.4–1.6:1); rename wins over later inline. */
+@keyframes diagram-relpulse-readable {
+  0%, 58% { opacity: 0.92; }
+  74%, 92% { opacity: 1; }
+  100% { opacity: 0.92; }
+}
+.prose .diagram .relpulse {
+  animation-name: diagram-relpulse-readable;
+}
+
+.prose pre {
+  max-width: 100%;
+  overflow-x: auto;
+  white-space: pre;
+  overflow-wrap: normal;
+  padding: 1rem;
+  border: 1px solid var(--rule);
+  border-radius: .25rem;
+  font: .9rem/1.55 ui-monospace, Menlo, Consolas, monospace;
+  tab-size: 4;
+}
+.prose pre code { font: inherit; }
+
+/* Readable series navigation with narrow-screen wrapping. */
+.series-nav { margin: 1.5rem 0; padding: 1rem 1.25rem; border: 1px solid #d9dedb; border-radius: .65rem; }
+.series-nav h2 { font-size: 1.05rem; margin: 0 0 .45rem; }
+.series-nav ol { margin: 0; padding-inline-start: 1.6rem; }
+.series-nav li { padding: .17rem 0; }
+.series-nav a, .series-pagination a { overflow-wrap: anywhere; }
+.series-nav a[aria-current="page"] { font-weight: 700; text-decoration-thickness: .15em; }
+.series-pagination { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; margin: 2rem 0 0; }
+.series-pagination a { display: block; padding: .9rem 1rem; border: 1px solid #d9dedb; border-radius: .65rem; }
+.series-pagination span { display: block; font-weight: 700; font-size: .85rem; margin-bottom: .3rem; }
+.series-prev { grid-column: 1; }
+.series-next { grid-column: 2; }
+@media (max-width: 600px) {
+  .series-pagination { grid-template-columns: minmax(0, 1fr); }
+  .series-prev, .series-next { grid-column: 1; }
+}
+
+/* Featured series starts at chapter zero instead of a reverse-date listing. */
+.series-index { margin: 1rem 0 2rem; }
+.series-index h2 { margin: 0 0 .85rem; font-size: clamp(1.25rem, 4vw, 1.65rem); line-height: 1.25; }
+.series-index h3 { margin: 1rem 0 .4rem; font-size: 1rem; }
+.series-index .series-start { text-decoration: underline; }
+.series-index .series-order { margin: 0; padding-inline-start: 2.2rem; list-style-type: decimal-leading-zero; }
+.series-order li { padding: .19rem 0; }
+.series-order li::marker { font-variant-numeric: tabular-nums; color: #405b53; font-weight: 700; }
+.series-order a { overflow-wrap: break-word; }
+
+/* Soft-wrap highlighted code without changing the source or token spans. */
+.prose .highlight pre {
+  color: #1f2328;
+  /* Hugo sets the light GitHub palette's background inline. */
+  background-color: #fff !important;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+.prose .highlight pre code,
+.prose .highlight pre code span { white-space: inherit; overflow-wrap: inherit; }
+.prose .highlight pre code > span,
+.prose .highlight pre code > span > span { min-width: 0; max-width: 100%; }

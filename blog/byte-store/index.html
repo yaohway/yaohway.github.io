@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ByteStore. Builds, tests and edge cases · Yaohui Chen’s Blog</title>
+  <meta name="description" content="What ByteStore is, what tests establish, and what the Rocq model says.">
+  <link rel="canonical" href="https://yaohway.github.io/blog/byte-store/">
+  <link rel="stylesheet" href="/blog/blog.css">
+  
+  <link rel="alternate" type="application/rss&#43;xml" href="/blog/index.xml" title="Yaohui Chen’s Blog">
+  
+</head>
+<body>
+  <header>
+    <a class="author" href="/">Yaohui Chen</a>
+    <nav aria-label="Blog navigation">
+      <a href="/blog/">Blog</a>
+      
+        
+          <a href="/blog/series/">Series</a>
+        
+      
+        
+          <a href="/blog/tags/">Tags</a>
+        
+      
+      <a href="/blog/index.xml">RSS</a>
+    </nav>
+  </header>
+  <main>
+  <article>
+    <time datetime="2026-11-20T00:00:00Z">20 November 2026</time>
+    <h1>ByteStore. Builds, tests and edge cases</h1>
+    <p class="summary">What ByteStore is, what tests establish, and what the Rocq model says.</p>
+    <dl class="metadata">
+      
+        
+        
+          <div>
+            <dt>Series</dt>
+            <dd><a href="/blog/series/how-c&#43;&#43;-verification-works/">How C&#43;&#43; verification works</a></dd>
+          </div>
+        
+      
+        
+        
+          <div>
+            <dt>Tags</dt>
+            <dd><a href="/blog/tags/cpp/">Cpp</a>, <a href="/blog/tags/rocq/">Rocq</a>, <a href="/blog/tags/testing/">Testing</a>, <a href="/blog/tags/memory-safety/">Memory-Safety</a></dd>
+          </div>
+        
+      
+    </dl>
+    
+    
+    
+      
+      
+      <nav class="series-nav" aria-labelledby="series-contents">
+        <h2 id="series-contents">In this series</h2>
+        <ol start="0">
+          
+            
+            
+            <li><a href="/blog/start-here/">Start here. How C&#43;&#43; verification works</a></li>
+          
+            
+            
+            <li><a href="/blog/demystifying-cpp-proof/">Demystifying C&#43;&#43; proof: verifying a toy program, end to end</a></li>
+          
+            
+            
+            <li><a href="/blog/byte-store/" aria-current="page">ByteStore. Builds, tests and edge cases</a></li>
+          
+            
+            
+            <li><a href="/blog/two-levels-of-spec/">Two levels of spec and refinement between them</a></li>
+          
+            
+            
+            <li><a href="/blog/cpp-semantics-and-tooling/">C&#43;&#43; semantics and tooling</a></li>
+          
+            
+            
+            <li><a href="/blog/what-is-proven/">What is proven, what is not. Lifetime, exhaustion, and the boundary of the check</a></li>
+          
+            
+            
+            <li><a href="/blog/harder-cases/">Open challenges. Verifying C&#43;&#43; with formal proof</a></li>
+          
+        </ol>
+      </nav>
+      <div class="prose"><style>
+.diagram{
+  --diagram-bg:#fcfcfb; --diagram-surface:#ffffff; --diagram-surface-2:#f3f4f1;
+  --diagram-ink:#161a18; --diagram-ink-2:#454d49; --diagram-ink-3:#7a837e;
+  --diagram-line:#e2e5e0; --diagram-line-strong:#c9cfc8;
+  --diagram-teal:#0e6b5e; --diagram-teal-light:#e6f2ef;
+  --diagram-rust:#9a3b1e; --diagram-rust-light:#fdf0e9;
+  --diagram-amber:#7a5f00; --diagram-amber-light:#fdf6d8;
+}
+.diagram{margin:14px 0 8px}
+.diagram svg{display:block;width:100%;height:auto}
+.dbox{fill:var(--diagram-surface);stroke:var(--diagram-line-strong)}
+.dtitle{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;font-weight:600;fill:var(--diagram-ink)}
+.dtitle-sans{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:13px;font-weight:600;fill:var(--diagram-ink)}
+.dsub{font-size:10.5px;fill:var(--diagram-ink-3)}
+.darr{stroke:var(--diagram-ink-3);stroke-width:1.5}
+.dstatus{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.st-ok{fill:var(--diagram-teal)} .st-mid{fill:var(--diagram-amber)} .st-open{fill:var(--diagram-rust)}
+.anim{animation-duration:16s;animation-iteration-count:infinite;animation-timing-function:linear}
+@keyframes kIn3{0%,6%{opacity:0}10%,100%{opacity:1}}
+@keyframes kOut3{0%,6%{opacity:1}10%,100%{opacity:0}}
+@keyframes kA0{0%,29%{opacity:1}33%,100%{opacity:0}}
+@keyframes kB0{0%,29%{opacity:0}33%,100%{opacity:1}}
+@keyframes kFlash{0%,27%{opacity:0}31%,39%{opacity:1}45%,100%{opacity:0}}
+@keyframes kA2{0%,54%{opacity:1}58%,100%{opacity:0}}
+@keyframes kB2{0%,54%{opacity:0}58%,100%{opacity:1}}
+@keyframes kRej{0%,76%{opacity:0}81%,89%{opacity:1}95%,100%{opacity:0}}
+@keyframes kCap1{0%,23%{opacity:1}25%,100%{opacity:0}}
+@keyframes kCap2{0%,25%{opacity:0}27%,48%{opacity:1}50%,100%{opacity:0}}
+@keyframes kCap3{0%,50%{opacity:0}52%,73%{opacity:1}75%,100%{opacity:0}}
+@keyframes kCap4{0%,75%{opacity:0}77%,100%{opacity:1}}
+.a-in3{animation-name:kIn3;opacity:0}
+.a-out3{animation-name:kOut3}
+.a-a0{animation-name:kA0} .a-b0{animation-name:kB0;opacity:0}
+.a-flash{animation-name:kFlash;opacity:0}
+.a-a2{animation-name:kA2} .a-b2{animation-name:kB2;opacity:0}
+.a-rej{animation-name:kRej;opacity:0}
+.a-cap1{animation-name:kCap1} .a-cap2{animation-name:kCap2;opacity:0} .a-cap3{animation-name:kCap3;opacity:0} .a-cap4{animation-name:kCap4;opacity:0}
+.rm-cap{display:none;font-size:13.5px;color:var(--diagram-ink-2);margin-top:8px}
+@media (prefers-reduced-motion: reduce){
+  .diagram *{animation:none!important}
+  .animcaps{display:none}
+  .rm-cap{display:block}
+}
+</style>
+<p>This series verifies one small C++ program end to end: ByteStore.</p>
+<p><strong>Answers.</strong> What ByteStore is, what tests establish, and what the Rocq model says.</p>
+<h2 id="1-bytestore">1. ByteStore</h2>
+<p>ByteStore&rsquo;s C++ implementation is the class <code>CheckedStore</code> in <a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/checked_store.hpp"><code>checked_store.hpp</code></a>. The class, in full:</p>
+<p><a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/checked_store.hpp">checked_store.hpp</a></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span><span style="color:#57606a">#include</span> <span style="color:#57606a">&lt;cstddef&gt;</span><span style="color:#57606a">
+</span></span></span><span style="display:flex;"><span><span style="color:#57606a">#include</span> <span style="color:#57606a">&lt;cstdint&gt;</span><span style="color:#57606a">
+</span></span></span><span style="display:flex;"><span><span style="color:#57606a">#include</span> <span style="color:#57606a">&lt;limits&gt;</span><span style="color:#57606a">
+</span></span></span><span style="display:flex;"><span><span style="color:#57606a">#include</span> <span style="color:#57606a">&lt;map&gt;</span><span style="color:#57606a">
+</span></span></span><span style="display:flex;"><span><span style="color:#57606a">#include</span> <span style="color:#57606a">&lt;optional&gt;</span><span style="color:#57606a">
+</span></span></span><span style="display:flex;"><span><span style="color:#57606a">#include</span> <span style="color:#57606a">&lt;vector&gt;</span><span style="color:#57606a">
+</span></span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#57606a">// Each identity is meaningful only within the live store that issued it.
+</span></span></span><span style="display:flex;"><span><span style="color:#cf222e">class</span> <span style="color:#1f2328">CheckedStore</span> <span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">public</span><span style="color:#0550ae">:</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">using</span> Identity <span style="color:#0550ae">=</span> std<span style="color:#0550ae">::</span><span style="color:#cf222e">uint64_t</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">using</span> Byte <span style="color:#0550ae">=</span> std<span style="color:#0550ae">::</span><span style="color:#cf222e">uint8_t</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">explicit</span> <span style="color:#6639ba">CheckedStore</span><span style="color:#1f2328">(</span>Identity identity_limit <span style="color:#0550ae">=</span> std<span style="color:#0550ae">::</span>numeric_limits<span style="color:#0550ae">&lt;</span>Identity<span style="color:#0550ae">&gt;::</span>max<span style="color:#1f2328">())</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#0550ae">:</span> identity_limit_<span style="color:#1f2328">(</span>identity_limit<span style="color:#1f2328">)</span> <span style="color:#1f2328">{}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    CheckedStore<span style="color:#1f2328">(</span><span style="color:#cf222e">const</span> CheckedStore<span style="color:#0550ae">&amp;</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">=</span> <span style="color:#cf222e">delete</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>    CheckedStore<span style="color:#0550ae">&amp;</span> <span style="color:#cf222e">operator</span><span style="color:#0550ae">=</span><span style="color:#1f2328">(</span><span style="color:#cf222e">const</span> CheckedStore<span style="color:#0550ae">&amp;</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">=</span> <span style="color:#cf222e">delete</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>    CheckedStore<span style="color:#1f2328">(</span>CheckedStore<span style="color:#0550ae">&amp;&amp;</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">=</span> <span style="color:#cf222e">delete</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>    CheckedStore<span style="color:#0550ae">&amp;</span> <span style="color:#cf222e">operator</span><span style="color:#0550ae">=</span><span style="color:#1f2328">(</span>CheckedStore<span style="color:#0550ae">&amp;&amp;</span><span style="color:#1f2328">)</span> <span style="color:#0550ae">=</span> <span style="color:#cf222e">delete</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">[[nodiscard]]</span> std<span style="color:#0550ae">::</span>optional<span style="color:#0550ae">&lt;</span>Identity<span style="color:#0550ae">&gt;</span> allocate<span style="color:#1f2328">(</span>std<span style="color:#0550ae">::</span>size_t length<span style="color:#1f2328">)</span> <span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#1f2328">(</span>next_identity_ <span style="color:#0550ae">&gt;=</span> identity_limit_<span style="color:#1f2328">)</span> <span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">return</span> std<span style="color:#0550ae">::</span>nullopt<span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#57606a">// Every live key is below this identity. Advance only after insertion succeeds.
+</span></span></span><span style="display:flex;"><span>        <span style="color:#cf222e">const</span> Identity id <span style="color:#0550ae">=</span> next_identity_<span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>        buffers_<span style="color:#1f2328">.</span>try_emplace<span style="color:#1f2328">(</span>id<span style="color:#1f2328">,</span> length<span style="color:#1f2328">,</span> Byte<span style="color:#1f2328">{</span><span style="color:#0550ae">0</span><span style="color:#1f2328">});</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#0550ae">++</span>next_identity_<span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> id<span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">[[nodiscard]]</span> std<span style="color:#0550ae">::</span>optional<span style="color:#0550ae">&lt;</span>Byte<span style="color:#0550ae">&gt;</span> read<span style="color:#1f2328">(</span>Identity id<span style="color:#1f2328">,</span> std<span style="color:#0550ae">::</span>size_t offset<span style="color:#1f2328">)</span> <span style="color:#cf222e">const</span> <span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">const</span> <span style="color:#cf222e">auto</span> entry <span style="color:#0550ae">=</span> buffers_<span style="color:#1f2328">.</span>find<span style="color:#1f2328">(</span>id<span style="color:#1f2328">);</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#1f2328">(</span>entry <span style="color:#0550ae">==</span> buffers_<span style="color:#1f2328">.</span>end<span style="color:#1f2328">()</span> <span style="color:#0550ae">||</span> offset <span style="color:#0550ae">&gt;=</span> entry<span style="color:#0550ae">-&gt;</span>second<span style="color:#1f2328">.</span>size<span style="color:#1f2328">())</span> <span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">return</span> std<span style="color:#0550ae">::</span>nullopt<span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">}</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> entry<span style="color:#0550ae">-&gt;</span>second<span style="color:#1f2328">.</span>at<span style="color:#1f2328">(</span>offset<span style="color:#1f2328">);</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">[[nodiscard]]</span> <span style="color:#cf222e">bool</span> write<span style="color:#1f2328">(</span>Identity id<span style="color:#1f2328">,</span> std<span style="color:#0550ae">::</span>size_t offset<span style="color:#1f2328">,</span> Byte value<span style="color:#1f2328">)</span> <span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">const</span> <span style="color:#cf222e">auto</span> entry <span style="color:#0550ae">=</span> buffers_<span style="color:#1f2328">.</span>find<span style="color:#1f2328">(</span>id<span style="color:#1f2328">);</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">if</span> <span style="color:#1f2328">(</span>entry <span style="color:#0550ae">==</span> buffers_<span style="color:#1f2328">.</span>end<span style="color:#1f2328">()</span> <span style="color:#0550ae">||</span> offset <span style="color:#0550ae">&gt;=</span> entry<span style="color:#0550ae">-&gt;</span>second<span style="color:#1f2328">.</span>size<span style="color:#1f2328">())</span> <span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">return</span> <span style="color:#6639ba">false</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#1f2328">}</span>
+</span></span><span style="display:flex;"><span>        entry<span style="color:#0550ae">-&gt;</span>second<span style="color:#1f2328">.</span>at<span style="color:#1f2328">(</span>offset<span style="color:#1f2328">)</span> <span style="color:#0550ae">=</span> value<span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> <span style="color:#6639ba">true</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">[[nodiscard]]</span> <span style="color:#cf222e">bool</span> release<span style="color:#1f2328">(</span>Identity id<span style="color:#1f2328">)</span> <span style="color:#1f2328">{</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#cf222e">return</span> buffers_<span style="color:#1f2328">.</span>erase<span style="color:#1f2328">(</span>id<span style="color:#1f2328">)</span> <span style="color:#0550ae">!=</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#1f2328">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">private</span><span style="color:#0550ae">:</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#cf222e">const</span> Identity identity_limit_<span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>    Identity next_identity_ <span style="color:#0550ae">=</span> <span style="color:#0550ae">0</span><span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span>    std<span style="color:#0550ae">::</span>map<span style="color:#0550ae">&lt;</span>Identity<span style="color:#1f2328">,</span> std<span style="color:#0550ae">::</span>vector<span style="color:#0550ae">&lt;</span>Byte<span style="color:#0550ae">&gt;&gt;</span> buffers_<span style="color:#1f2328">;</span>
+</span></span><span style="display:flex;"><span><span style="color:#1f2328">};</span>
+</span></span></code></pre></div><h2 id="2-build-and-run">2. Build and run</h2>
+<ul>
+<li>Run <a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/run_cpp.sh"><code>run_cpp.sh</code></a>: clang++ with <code>-std=c++17 -Wall -Wextra -Wpedantic -Wconversion -Werror</code>. Build 1: <code>-O2 -DNDEBUG</code>. Build 2 uses ASan and UBSan with <code>-fno-sanitize-recover=all</code>. Build 2 is skipped only when the sanitizer probe itself does not build.</li>
+<li>Tests use an explicit <code>CHECK</code> macro. The macro stays active under <code>NDEBUG</code> and exits nonzero on failure.</li>
+<li>Tests cover selected executions only. Unexecuted states are the model&rsquo;s job, section 4.</li>
+</ul>
+<h2 id="3-edge-cases-predict-from-specmd-then-run">3. Edge cases. Predict from <a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/SPEC.md">SPEC.md</a>, then run</h2>
+<ul>
+<li><strong>Zero length buffer.</strong> Valid. No offset is accessible. Every read and write is rejected, including <code>offset = SIZE_MAX</code>.</li>
+<li><strong><code>offset == length</code>.</strong> Rejected, store unchanged. A maximal offset is also rejected.</li>
+<li><strong>Released ID.</strong> Read, write, and release are all rejected. A later allocation gets a <em>fresh</em> ID: with limit 3, release ID 0 and the next allocation is 2.</li>
+<li><strong>Exhaustion.</strong> At the limit, allocation fails closed. The counter stays put and existing buffers stay untouched. With limit 0, allocation always fails.</li>
+<li><strong>Allocation exception.</strong> An oversize length throws <code>length_error</code> or <code>bad_alloc</code>. ID 1 stays available. The next successful allocation returns 1.</li>
+<li><strong>Copy semantics.</strong> <code>static_assert</code>s state that copy and move are non-constructible and non-assignable.</li>
+</ul>
+<h2 id="4-modelv-read-closely-332-lines">4. <a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/Model.v">Model.v</a> read closely. 332 lines</h2>
+<p>Excerpt from <a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/Model.v">Model.v</a>: <code>lookup</code>, <code>allocate</code>, <code>write</code>, and <code>release</code>, the definitions the theorems below state properties of.</p>
+<figure class="diagram">
+      <svg viewBox="0 0 460 258" role="img" aria-label="Abstract model state, animated: allocate adds ID 3 and advances next_id to 4; a write changes one byte in ID 0; release turns ID 2 into a None tombstone; a write to the released ID 2 is rejected and leaves every slot unchanged.">
+        <text class="dsub" x="10" y="22" style="font-size:12px;fill:var(--diagram-ink-2)">next_id =</text>
+        <text class="dtitle anim a-out3" x="72" y="22">3</text>
+        <text class="dtitle anim a-in3" x="72" y="22">4</text>
+        <rect class="dbox" x="10" y="40" width="212" height="62" rx="8"/>
+        <rect class="anim a-flash" x="10" y="40" width="212" height="62" rx="8" fill="var(--diagram-teal-light)"/>
+        <text class="dsub" x="24" y="60" style="letter-spacing:.06em">ID 0 · LIVE</text>
+        <text class="dtitle anim a-a0" x="24" y="86" style="font-size:12.5px">Some [x00; x11]</text>
+        <text class="dtitle anim a-b0" x="24" y="86" style="font-size:12.5px">Some [x2a; x11]</text>
+        <rect class="dbox" x="238" y="40" width="212" height="62" rx="8" stroke-dasharray="5 4"/>
+        <text class="dsub" x="252" y="60" style="letter-spacing:.06em">ID 1 · RELEASED</text>
+        <text class="dtitle" x="252" y="86" style="font-size:12.5px">None</text>
+        <rect class="dbox" x="10" y="118" width="212" height="62" rx="8"/>
+        <rect class="anim a-b2" x="10" y="118" width="212" height="62" rx="8" fill="var(--diagram-surface)" stroke="var(--diagram-line-strong)" stroke-dasharray="5 4"/>
+        <rect class="anim a-rej" x="10" y="118" width="212" height="62" rx="8" fill="none" stroke="var(--diagram-rust)" stroke-width="2"/>
+        <text class="dsub anim a-a2" x="24" y="138" style="letter-spacing:.06em">ID 2 · LIVE, EMPTY</text>
+        <text class="dsub anim a-b2" x="24" y="138" style="letter-spacing:.06em">ID 2 · RELEASED</text>
+        <text class="dtitle anim a-a2" x="24" y="164" style="font-size:12.5px">Some []</text>
+        <text class="dtitle anim a-b2" x="24" y="164" style="font-size:12.5px">None</text>
+        <rect x="238" y="118" width="212" height="62" rx="8" fill="none" stroke="var(--diagram-line)" stroke-dasharray="4 4"/>
+        <text class="dsub" x="252" y="152" style="fill:var(--diagram-line-strong)">· · ·</text>
+        <g class="anim a-in3">
+          <rect class="dbox" x="238" y="118" width="212" height="62" rx="8"/>
+          <text class="dsub" x="252" y="138" style="letter-spacing:.06em">ID 3 · LIVE</text>
+          <text class="dtitle" x="252" y="164" style="font-size:12.5px">Some [x00]</text>
+        </g>
+        <g class="animcaps">
+          <text class="anim a-cap1" x="10" y="222" style="font-size:13.5px;fill:var(--diagram-ink-2)">allocate → ID 3 · next_id = 4</text>
+          <text class="anim a-cap2" x="10" y="222" style="font-size:13.5px;fill:var(--diagram-ink-2)">write ID 0, offset 0 → one byte changes</text>
+          <text class="anim a-cap3" x="10" y="222" style="font-size:13.5px;fill:var(--diagram-ink-2)">release ID 2 → slot becomes None</text>
+          <text class="anim a-cap4" x="10" y="222" style="font-size:13.5px;fill:var(--diagram-ink-2)">write ID 2 → <tspan style="fill:var(--diagram-rust);font-weight:600">rejected</tspan> · store unchanged</text>
+          <circle class="anim a-cap1" cx="12" cy="240" r="3.5" fill="var(--diagram-teal)"/>
+          <circle class="anim a-cap2" cx="28" cy="240" r="3.5" fill="var(--diagram-teal)"/>
+          <circle class="anim a-cap3" cx="44" cy="240" r="3.5" fill="var(--diagram-teal)"/>
+          <circle class="anim a-cap4" cx="60" cy="240" r="3.5" fill="var(--diagram-teal)"/>
+        </g>
+      </svg>
+      <p class="rm-cap">Steps: allocate adds ID 3 and next_id becomes 4; a write changes one byte in ID 0; release turns ID 2 into None; a write to ID 2 is rejected and leaves every slot unchanged.</p>
+    </figure>
+<p><a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/Model.v">Model.v</a>, core definitions</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-coq" data-lang="coq"><span style="display:flex;"><span><span style="color:#cf222e">Definition</span> lookup <span style="color:#0550ae">(</span>s <span style="color:#0550ae">:</span> store<span style="color:#0550ae">)</span> <span style="color:#0550ae">(</span>id <span style="color:#0550ae">:</span> <span style="color:#cf222e">nat</span><span style="color:#0550ae">)</span> <span style="color:#0550ae">:</span> option buffer <span style="color:#0550ae">:=</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#cf222e">match</span> nth_error <span style="color:#0550ae">(</span>slots s<span style="color:#0550ae">)</span> id <span style="color:#cf222e">with</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0550ae">|</span> Some entry <span style="color:#0550ae">=&gt;</span> entry
+</span></span><span style="display:flex;"><span>  <span style="color:#0550ae">|</span> None <span style="color:#0550ae">=&gt;</span> None
+</span></span><span style="display:flex;"><span>  <span style="color:#cf222e">end</span><span style="color:#0550ae">.</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">Definition</span> allocate <span style="color:#0550ae">(</span>s <span style="color:#0550ae">:</span> store<span style="color:#0550ae">)</span> <span style="color:#0550ae">(</span>size <span style="color:#0550ae">:</span> <span style="color:#cf222e">nat</span><span style="color:#0550ae">)</span> <span style="color:#0550ae">:</span> option <span style="color:#cf222e">nat</span> <span style="color:#0550ae">*</span> store <span style="color:#0550ae">:=</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#cf222e">if</span> next_id s <span style="color:#0550ae">&lt;?</span> limit s <span style="color:#cf222e">then</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#0550ae">(</span>Some <span style="color:#0550ae">(</span>next_id s<span style="color:#0550ae">),</span> append_buffer s <span style="color:#0550ae">(</span><span style="color:#cf222e">repeat</span> x00 size<span style="color:#0550ae">))</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#cf222e">else</span> <span style="color:#0550ae">(</span>None<span style="color:#0550ae">,</span> s<span style="color:#0550ae">).</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">Definition</span> write <span style="color:#0550ae">(</span>s <span style="color:#0550ae">:</span> store<span style="color:#0550ae">)</span> <span style="color:#0550ae">(</span>id offset <span style="color:#0550ae">:</span> <span style="color:#cf222e">nat</span><span style="color:#0550ae">)</span> <span style="color:#0550ae">(</span>value <span style="color:#0550ae">:</span> byte<span style="color:#0550ae">)</span> <span style="color:#0550ae">:</span> <span style="color:#cf222e">bool</span> <span style="color:#0550ae">*</span> store <span style="color:#0550ae">:=</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#cf222e">match</span> lookup s id <span style="color:#cf222e">with</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0550ae">|</span> Some b <span style="color:#0550ae">=&gt;</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#cf222e">if</span> offset <span style="color:#0550ae">&lt;?</span> length b <span style="color:#cf222e">then</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#0550ae">(</span><span style="color:#6a737d">true</span><span style="color:#0550ae">,</span> set_slot s id <span style="color:#0550ae">(</span>Some <span style="color:#0550ae">(</span>replace_at offset value b<span style="color:#0550ae">)))</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#cf222e">else</span> <span style="color:#0550ae">(</span><span style="color:#6a737d">false</span><span style="color:#0550ae">,</span> s<span style="color:#0550ae">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0550ae">|</span> None <span style="color:#0550ae">=&gt;</span> <span style="color:#0550ae">(</span><span style="color:#6a737d">false</span><span style="color:#0550ae">,</span> s<span style="color:#0550ae">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#cf222e">end</span><span style="color:#0550ae">.</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">Definition</span> release <span style="color:#0550ae">(</span>s <span style="color:#0550ae">:</span> store<span style="color:#0550ae">)</span> <span style="color:#0550ae">(</span>id <span style="color:#0550ae">:</span> <span style="color:#cf222e">nat</span><span style="color:#0550ae">)</span> <span style="color:#0550ae">:</span> <span style="color:#cf222e">bool</span> <span style="color:#0550ae">*</span> store <span style="color:#0550ae">:=</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#cf222e">match</span> lookup s id <span style="color:#cf222e">with</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0550ae">|</span> Some <span style="color:#0550ae">_</span> <span style="color:#0550ae">=&gt;</span> <span style="color:#0550ae">(</span><span style="color:#6a737d">true</span><span style="color:#0550ae">,</span> set_slot s id None<span style="color:#0550ae">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#0550ae">|</span> None <span style="color:#0550ae">=&gt;</span> <span style="color:#0550ae">(</span><span style="color:#6a737d">false</span><span style="color:#0550ae">,</span> s<span style="color:#0550ae">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#cf222e">end</span><span style="color:#0550ae">.</span>
+</span></span></code></pre></div><p>Reading Rocq: <code>Definition</code> computes, <code>Theorem</code> claims, <code>Qed</code> means the kernel checked the proof.</p>
+<ul>
+<li><code>write_live_in_bounds</code></li>
+</ul>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-coq" data-lang="coq"><span style="display:flex;"><span><span style="color:#cf222e">Theorem</span> write_live_in_bounds s id offset value <span style="color:#cf222e">after</span> <span style="color:#0550ae">:</span>
+</span></span><span style="display:flex;"><span>  write s id offset value <span style="color:#0550ae">=</span> <span style="color:#0550ae">(</span><span style="color:#6a737d">true</span><span style="color:#0550ae">,</span> <span style="color:#cf222e">after</span><span style="color:#0550ae">)</span> <span style="color:#0550ae">-&gt;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#cf222e">exists</span> b<span style="color:#0550ae">,</span> lookup s id <span style="color:#0550ae">=</span> Some b <span style="color:#0550ae">/\</span> offset <span style="color:#0550ae">&lt;</span> length b <span style="color:#0550ae">/\</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#cf222e">after</span> <span style="color:#0550ae">=</span> set_slot s id <span style="color:#0550ae">(</span>Some <span style="color:#0550ae">(</span>replace_at offset value b<span style="color:#0550ae">)).</span>
+</span></span></code></pre></div><ul>
+<li><code>rejected_write_preserves_store</code></li>
+</ul>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-coq" data-lang="coq"><span style="display:flex;"><span><span style="color:#cf222e">Theorem</span> rejected_write_preserves_store s id offset value <span style="color:#cf222e">after</span> <span style="color:#0550ae">:</span>
+</span></span><span style="display:flex;"><span>  write s id offset value <span style="color:#0550ae">=</span> <span style="color:#0550ae">(</span><span style="color:#6a737d">false</span><span style="color:#0550ae">,</span> <span style="color:#cf222e">after</span><span style="color:#0550ae">)</span> <span style="color:#0550ae">-&gt;</span> <span style="color:#cf222e">after</span> <span style="color:#0550ae">=</span> s<span style="color:#0550ae">.</span>
+</span></span></code></pre></div><ul>
+<li><code>write_changes_one_byte</code></li>
+</ul>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-coq" data-lang="coq"><span style="display:flex;"><span><span style="color:#cf222e">Theorem</span> write_changes_one_byte s id offset value <span style="color:#cf222e">after</span> <span style="color:#0550ae">:</span>
+</span></span><span style="display:flex;"><span>  write s id offset value <span style="color:#0550ae">=</span> <span style="color:#0550ae">(</span><span style="color:#6a737d">true</span><span style="color:#0550ae">,</span> <span style="color:#cf222e">after</span><span style="color:#0550ae">)</span> <span style="color:#0550ae">-&gt;</span>
+</span></span><span style="display:flex;"><span>  read <span style="color:#cf222e">after</span> id offset <span style="color:#0550ae">=</span> Some value <span style="color:#0550ae">/\</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#cf222e">forall</span> j k<span style="color:#0550ae">,</span> j <span style="color:#0550ae">&lt;&gt;</span> id <span style="color:#0550ae">\/</span> k <span style="color:#0550ae">&lt;&gt;</span> offset <span style="color:#0550ae">-&gt;</span> read <span style="color:#cf222e">after</span> j k <span style="color:#0550ae">=</span> read s j k<span style="color:#0550ae">.</span>
+</span></span></code></pre></div><ul>
+<li><code>released_handle_stays_invalid</code></li>
+</ul>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-coq" data-lang="coq"><span style="display:flex;"><span><span style="color:#cf222e">Theorem</span> released_handle_stays_invalid s id <span style="color:#cf222e">after</span> ops offset value <span style="color:#0550ae">:</span>
+</span></span><span style="display:flex;"><span>  release s id <span style="color:#0550ae">=</span> <span style="color:#0550ae">(</span><span style="color:#6a737d">true</span><span style="color:#0550ae">,</span> <span style="color:#cf222e">after</span><span style="color:#0550ae">)</span> <span style="color:#0550ae">-&gt;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#cf222e">let</span> final <span style="color:#0550ae">:=</span> run <span style="color:#cf222e">after</span> ops <span style="color:#cf222e">in</span>
+</span></span><span style="display:flex;"><span>  read final id offset <span style="color:#0550ae">=</span> None <span style="color:#0550ae">/\</span> write final id offset value <span style="color:#0550ae">=</span> <span style="color:#0550ae">(</span><span style="color:#6a737d">false</span><span style="color:#0550ae">,</span> final<span style="color:#0550ae">)</span> <span style="color:#0550ae">/\</span>
+</span></span><span style="display:flex;"><span>  release final id <span style="color:#0550ae">=</span> <span style="color:#0550ae">(</span><span style="color:#6a737d">false</span><span style="color:#0550ae">,</span> final<span style="color:#0550ae">).</span>
+</span></span></code></pre></div><ul>
+<li><code>allocate_available</code> · <code>allocate_exhausted</code></li>
+</ul>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-coq" data-lang="coq"><span style="display:flex;"><span><span style="color:#cf222e">Theorem</span> allocate_available s size <span style="color:#0550ae">:</span>
+</span></span><span style="display:flex;"><span>  next_id s <span style="color:#0550ae">&lt;</span> limit s <span style="color:#0550ae">-&gt;</span>
+</span></span><span style="display:flex;"><span>  allocate s size <span style="color:#0550ae">=</span> <span style="color:#0550ae">(</span>Some <span style="color:#0550ae">(</span>next_id s<span style="color:#0550ae">),</span> append_buffer s <span style="color:#0550ae">(</span><span style="color:#cf222e">repeat</span> x00 size<span style="color:#0550ae">)).</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">Theorem</span> allocate_exhausted s size <span style="color:#0550ae">:</span>
+</span></span><span style="display:flex;"><span>  limit s <span style="color:#0550ae">&lt;=</span> next_id s <span style="color:#0550ae">-&gt;</span> allocate s size <span style="color:#0550ae">=</span> <span style="color:#0550ae">(</span>None<span style="color:#0550ae">,</span> s<span style="color:#0550ae">).</span>
+</span></span></code></pre></div><ul>
+<li><code>allocation_fresh</code> · <code>allocation_ids_strictly_increase</code></li>
+</ul>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-coq" data-lang="coq"><span style="display:flex;"><span><span style="color:#cf222e">Theorem</span> allocation_fresh s size id <span style="color:#cf222e">after</span> <span style="color:#0550ae">:</span>
+</span></span><span style="display:flex;"><span>  allocate s size <span style="color:#0550ae">=</span> <span style="color:#0550ae">(</span>Some id<span style="color:#0550ae">,</span> <span style="color:#cf222e">after</span><span style="color:#0550ae">)</span> <span style="color:#0550ae">-&gt;</span>
+</span></span><span style="display:flex;"><span>  id <span style="color:#0550ae">=</span> next_id s <span style="color:#0550ae">/\</span> id <span style="color:#0550ae">&lt;</span> limit s <span style="color:#0550ae">/\</span> next_id <span style="color:#cf222e">after</span> <span style="color:#0550ae">=</span> S id <span style="color:#0550ae">/\</span>
+</span></span><span style="display:flex;"><span>  lookup s id <span style="color:#0550ae">=</span> None <span style="color:#0550ae">/\</span> lookup <span style="color:#cf222e">after</span> id <span style="color:#0550ae">=</span> Some <span style="color:#0550ae">(</span><span style="color:#cf222e">repeat</span> x00 size<span style="color:#0550ae">).</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#cf222e">Theorem</span> allocation_ids_strictly_increase s size id <span style="color:#cf222e">after</span> ops size&#39; id&#39; final <span style="color:#0550ae">:</span>
+</span></span><span style="display:flex;"><span>  allocate s size <span style="color:#0550ae">=</span> <span style="color:#0550ae">(</span>Some id<span style="color:#0550ae">,</span> <span style="color:#cf222e">after</span><span style="color:#0550ae">)</span> <span style="color:#0550ae">-&gt;</span>
+</span></span><span style="display:flex;"><span>  allocate <span style="color:#0550ae">(</span>run <span style="color:#cf222e">after</span> ops<span style="color:#0550ae">)</span> size&#39; <span style="color:#0550ae">=</span> <span style="color:#0550ae">(</span>Some id&#39;<span style="color:#0550ae">,</span> final<span style="color:#0550ae">)</span> <span style="color:#0550ae">-&gt;</span>
+</span></span><span style="display:flex;"><span>  id <span style="color:#0550ae">&lt;</span> id&#39;<span style="color:#0550ae">.</span>
+</span></span></code></pre></div><ul>
+<li><code>read_live_in_bounds</code></li>
+</ul>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-coq" data-lang="coq"><span style="display:flex;"><span><span style="color:#cf222e">Theorem</span> read_live_in_bounds s id offset value <span style="color:#0550ae">:</span>
+</span></span><span style="display:flex;"><span>  read s id offset <span style="color:#0550ae">=</span> Some value <span style="color:#0550ae">-&gt;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#cf222e">exists</span> b<span style="color:#0550ae">,</span> lookup s id <span style="color:#0550ae">=</span> Some b <span style="color:#0550ae">/\</span> offset <span style="color:#0550ae">&lt;</span> length b<span style="color:#0550ae">.</span>
+</span></span></code></pre></div><ul>
+<li><code>absent_release_preserves_store</code></li>
+</ul>
+<div class="highlight"><pre tabindex="0" style="background-color:#f7f7f7;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-coq" data-lang="coq"><span style="display:flex;"><span><span style="color:#cf222e">Theorem</span> absent_release_preserves_store s id <span style="color:#0550ae">:</span>
+</span></span><span style="display:flex;"><span>  lookup s id <span style="color:#0550ae">=</span> None <span style="color:#0550ae">-&gt;</span> release s id <span style="color:#0550ae">=</span> <span style="color:#0550ae">(</span><span style="color:#6a737d">false</span><span style="color:#0550ae">,</span> s<span style="color:#0550ae">).</span>
+</span></span></code></pre></div><p><strong>Sources:</strong> <a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/checked_store.hpp">checked_store.hpp</a> · <a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/tests.cpp">tests.cpp</a> · <a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/run_cpp.sh">run_cpp.sh</a> · <a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/Model.v">Model.v</a>.</p>
+</div>
+      <nav class="series-pagination" aria-label="Series navigation">
+        
+          
+          <a class="series-prev" rel="prev" href="/blog/demystifying-cpp-proof/"><span>Previous</span>Demystifying C&#43;&#43; proof: verifying a toy program, end to end</a>
+        
+        
+          
+          <a class="series-next" rel="next" href="/blog/two-levels-of-spec/"><span>Next</span>Two levels of spec and refinement between them</a>
+        
+      </nav>
+    
+  </article>
+</main>
+</body>
+</html>

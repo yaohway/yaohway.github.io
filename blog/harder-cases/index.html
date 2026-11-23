@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Open challenges. Verifying C&#43;&#43; with formal proof · Yaohui Chen’s Blog</title>
+  <meta name="description" content="The workflow end to end, and what stays open for verifying C&#43;&#43; with formal proof.">
+  <link rel="canonical" href="https://yaohway.github.io/blog/harder-cases/">
+  <link rel="stylesheet" href="/blog/blog.css">
+  
+  <link rel="alternate" type="application/rss&#43;xml" href="/blog/index.xml" title="Yaohui Chen’s Blog">
+  
+</head>
+<body>
+  <header>
+    <a class="author" href="/">Yaohui Chen</a>
+    <nav aria-label="Blog navigation">
+      <a href="/blog/">Blog</a>
+      
+        
+          <a href="/blog/series/">Series</a>
+        
+      
+        
+          <a href="/blog/tags/">Tags</a>
+        
+      
+      <a href="/blog/index.xml">RSS</a>
+    </nav>
+  </header>
+  <main>
+  <article>
+    <time datetime="2026-11-20T00:00:00Z">20 November 2026</time>
+    <h1>Open challenges. Verifying C&#43;&#43; with formal proof</h1>
+    <p class="summary">The workflow end to end, and what stays open for verifying C++ with formal proof.</p>
+    <dl class="metadata">
+      
+        
+        
+          <div>
+            <dt>Series</dt>
+            <dd><a href="/blog/series/how-c&#43;&#43;-verification-works/">How C&#43;&#43; verification works</a></dd>
+          </div>
+        
+      
+        
+        
+          <div>
+            <dt>Tags</dt>
+            <dd><a href="/blog/tags/overflow/">Overflow</a>, <a href="/blog/tags/parsers/">Parsers</a>, <a href="/blog/tags/formal-verification/">Formal-Verification</a>, <a href="/blog/tags/limits/">Limits</a></dd>
+          </div>
+        
+      
+    </dl>
+    
+    
+    
+      
+      
+      <nav class="series-nav" aria-labelledby="series-contents">
+        <h2 id="series-contents">In this series</h2>
+        <ol start="0">
+          
+            
+            
+            <li><a href="/blog/start-here/">Start here. How C&#43;&#43; verification works</a></li>
+          
+            
+            
+            <li><a href="/blog/demystifying-cpp-proof/">Demystifying C&#43;&#43; proof: verifying a toy program, end to end</a></li>
+          
+            
+            
+            <li><a href="/blog/byte-store/">ByteStore. Builds, tests and edge cases</a></li>
+          
+            
+            
+            <li><a href="/blog/two-levels-of-spec/">Two levels of spec and refinement between them</a></li>
+          
+            
+            
+            <li><a href="/blog/cpp-semantics-and-tooling/">C&#43;&#43; semantics and tooling</a></li>
+          
+            
+            
+            <li><a href="/blog/what-is-proven/">What is proven, what is not. Lifetime, exhaustion, and the boundary of the check</a></li>
+          
+            
+            
+            <li><a href="/blog/harder-cases/" aria-current="page">Open challenges. Verifying C&#43;&#43; with formal proof</a></li>
+          
+        </ol>
+      </nav>
+      <div class="prose"><style>
+.diagram{
+  --diagram-bg:#fcfcfb; --diagram-surface:#ffffff; --diagram-surface-2:#f3f4f1;
+  --diagram-ink:#161a18; --diagram-ink-2:#454d49; --diagram-ink-3:#7a837e;
+  --diagram-line:#e2e5e0; --diagram-line-strong:#c9cfc8;
+  --diagram-teal:#0e6b5e; --diagram-teal-light:#e6f2ef;
+  --diagram-rust:#9a3b1e; --diagram-rust-light:#fdf0e9;
+  --diagram-amber:#7a5f00; --diagram-amber-light:#fdf6d8;
+}
+.diagram{margin:14px 0 8px}
+.diagram svg{display:block;width:100%;height:auto}
+.dbox{fill:var(--diagram-surface);stroke:var(--diagram-line-strong)}
+.dtitle{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;font-weight:600;fill:var(--diagram-ink)}
+.dtitle-sans{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:13px;font-weight:600;fill:var(--diagram-ink)}
+.dsub{font-size:10.5px;fill:var(--diagram-ink-3)}
+.darr{stroke:var(--diagram-ink-3);stroke-width:1.5}
+.dstatus{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.st-ok{fill:var(--diagram-teal)} .st-mid{fill:var(--diagram-amber)} .st-open{fill:var(--diagram-rust)}
+@keyframes seqpulse{0%,100%{fill:var(--diagram-surface)}6%{fill:var(--diagram-teal-light)}15%{fill:var(--diagram-surface)}}
+.seq{animation:seqpulse 6.6s ease-in-out infinite}
+.wnum{font-size:15px;font-weight:800;fill:var(--diagram-teal)}
+.wtitle{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:12.5px;font-weight:600;fill:var(--diagram-ink)}
+.wsub{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:11.5px;fill:var(--diagram-ink-2)}
+@media (prefers-reduced-motion: reduce){.diagram *{animation:none!important}}
+</style>
+<p>This series verifies one small C++ program end to end, ByteStore.</p>
+<p><strong>Answers.</strong> The workflow end to end, and what stays open for verifying C++ with formal proof.</p>
+<p>The proof steps settle one property. Overflow does not occur on the covered paths. <a href="/blog/what-is-proven/">Post 05</a> gives the derivation.</p>
+<h2 id="1-workflow">1. Workflow</h2>
+<p>Six steps produce that guarantee.</p>
+<figure class="diagram">
+      <svg viewBox="0 0 460 564" role="img" aria-label="Workflow, six steps in sequence: freeze the spec before the implementation; model the spec and prove the security theorems; refine to an implementation-shaped model and prove simulation; translate the real source and check what cpp2v and BRiCk can check; test the binary in normal and sanitizer builds; audit the assumptions and publish the trust base.">
+        <defs>
+          <marker id="ahW" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--diagram-ink-3)"/></marker>
+        </defs>
+        <rect class="dbox seq" x="10" y="6" width="440" height="66" rx="8"/>
+        <text class="wnum" x="26" y="46">1</text>
+        <text class="wtitle" x="52" y="33">Freeze the spec before the implementation.</text>
+        <text class="wsub" x="52" y="53">Do not weaken the spec to pass tests or proofs.</text>
+        <line class="darr" x1="230" y1="74" x2="230" y2="94" marker-end="url(#ahW)"/>
+        <rect class="dbox seq" style="animation-delay:1.1s" x="10" y="96" width="440" height="66" rx="8"/>
+        <text class="wnum" x="26" y="136">2</text>
+        <text class="wtitle" x="52" y="123">Model the spec.</text>
+        <text class="wsub" x="52" y="143">Prove the security theorems where stating them is easy.</text>
+        <line class="darr" x1="230" y1="164" x2="230" y2="184" marker-end="url(#ahW)"/>
+        <rect class="dbox seq" style="animation-delay:2.2s" x="10" y="186" width="440" height="66" rx="8"/>
+        <text class="wnum" x="26" y="226">3</text>
+        <text class="wtitle" x="52" y="213">Refine to an implementation-shaped model.</text>
+        <text class="wsub" x="52" y="233">Prove simulation for result and post state.</text>
+        <line class="darr" x1="230" y1="254" x2="230" y2="274" marker-end="url(#ahW)"/>
+        <rect class="dbox seq" style="animation-delay:3.3s" x="10" y="276" width="440" height="84" rx="8"/>
+        <text class="wnum" x="26" y="325">4</text>
+        <text class="wtitle" x="52" y="303">Translate the real source.</text>
+        <text class="wsub" x="52" y="323">Check what cpp2v and BRiCk can check today.</text>
+        <text class="wsub" x="52" y="341">Name the rest as open.</text>
+        <line class="darr" x1="230" y1="362" x2="230" y2="382" marker-end="url(#ahW)"/>
+        <rect class="dbox seq" style="animation-delay:4.4s" x="10" y="384" width="440" height="84" rx="8"/>
+        <text class="wnum" x="26" y="431">5</text>
+        <text class="wtitle" x="52" y="411">Test the binary in a normal build</text>
+        <text class="wtitle" x="52" y="429">and in sanitizer builds.</text>
+        <text class="wsub" x="52" y="449">Use the results as conformance evidence.</text>
+        <line class="darr" x1="230" y1="470" x2="230" y2="490" marker-end="url(#ahW)"/>
+        <rect class="dbox seq" style="animation-delay:5.5s" x="10" y="492" width="440" height="66" rx="8"/>
+        <text class="wnum" x="26" y="530">6</text>
+        <text class="wtitle" x="52" y="519">Audit the assumptions.</text>
+        <text class="wsub" x="52" y="539">Publish the trust base with the claim.</text>
+      </svg>
+    </figure>
+<h2 id="2-open-challenges">2. Open challenges</h2>
+<p>Four challenges stay open.</p>
+<ul>
+<li><strong>Generality of the spec.</strong> Lesson, from Post 05. The spec requires a rejected write to preserve the whole store, on every rejection path. Tests cover only the paths they are written for. Challenge. Writing specs for whole failure classes, and knowing how much generality is enough.</li>
+<li><strong>Model-to-code gap.</strong> Lesson, from Posts 03 and 04. The proof covers only part of the code, and each part rests on stated assumptions. The refinement covers the translated write method under stated representation and library contract assumptions. The binary, the concrete standard library, the whole lifecycle, and allocation sit outside it. Challenge. Widen what the proof covers and keep every assumption explicit and accounted for.</li>
+</ul>
+<p>Binary level, for contrast. Anthropic and Theorem prove compiled binaries instead of source. A binary proof covers the compiler&rsquo;s output, so no translation gap sits between the proof and the artifact that runs. The trusted base moves down a level, to the instruction-set model and the process model. Their spec is a fuzz obligation restated as a proof. The entry point never crashes. The spec in this series is hand-written and states properties directly, the exact effect of a write and the lifetime of an identity. Their proofs are machine-written and run to hundreds of thousands of lines. The proofs here fit in files a reader can finish. A proof at either level holds inside its stated machine and environment model.</p>
+<ul>
+<li><strong>Inputs with structure.</strong> Lesson, from the toy. Its guards are direct comparisons and offsets get no arithmetic, which is why representability stayed manageable. Challenge. Inputs with structure, parsers and length fields, where untrusted inputs get arithmetic and narrowing before any check.</li>
+<li><strong>Keeping proof alive.</strong> Lesson, from section 1. On a toy, spec, model, translation, and checks stayed in step by hand. Challenge. The cost of keeping specs and proofs in step with code that changes every week.</li>
+</ul>
+<p><strong>Sources:</strong> Synthesis of Posts 00 to 05. · Anthropic and Theorem, <a href="https://www.anthropic.com/research/formal-verification">&ldquo;LLMs are making formal software verification feasible at a much larger scale&rdquo;</a></p>
+</div>
+      <nav class="series-pagination" aria-label="Series navigation">
+        
+          
+          <a class="series-prev" rel="prev" href="/blog/what-is-proven/"><span>Previous</span>What is proven, what is not. Lifetime, exhaustion, and the boundary of the check</a>
+        
+        
+          
+          <a class="series-next" href="/blog/start-here/"><span>Back to Post 00</span>Start here. How C&#43;&#43; verification works</a>
+        
+      </nav>
+    
+  </article>
+</main>
+</body>
+</html>

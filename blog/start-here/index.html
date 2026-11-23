@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Start here. How C&#43;&#43; verification works · Yaohui Chen’s Blog</title>
+  <meta name="description" content="What this series claims, and how to read it.">
+  <link rel="canonical" href="https://yaohway.github.io/blog/start-here/">
+  <link rel="stylesheet" href="/blog/blog.css">
+  
+  <link rel="alternate" type="application/rss&#43;xml" href="/blog/index.xml" title="Yaohui Chen’s Blog">
+  
+</head>
+<body>
+  <header>
+    <a class="author" href="/">Yaohui Chen</a>
+    <nav aria-label="Blog navigation">
+      <a href="/blog/">Blog</a>
+      
+        
+          <a href="/blog/series/">Series</a>
+        
+      
+        
+          <a href="/blog/tags/">Tags</a>
+        
+      
+      <a href="/blog/index.xml">RSS</a>
+    </nav>
+  </header>
+  <main>
+  <article>
+    <time datetime="2026-11-20T00:00:00Z">20 November 2026</time>
+    <h1>Start here. How C&#43;&#43; verification works</h1>
+    <p class="summary">What this series claims, and how to read it.</p>
+    <dl class="metadata">
+      
+        
+        
+          <div>
+            <dt>Series</dt>
+            <dd><a href="/blog/series/how-c&#43;&#43;-verification-works/">How C&#43;&#43; verification works</a></dd>
+          </div>
+        
+      
+        
+        
+          <div>
+            <dt>Tags</dt>
+            <dd><a href="/blog/tags/formal-verification/">Formal-Verification</a>, <a href="/blog/tags/specs/">Specs</a>, <a href="/blog/tags/verification/">Verification</a></dd>
+          </div>
+        
+      
+    </dl>
+    
+    
+    
+      
+      
+      <nav class="series-nav" aria-labelledby="series-contents">
+        <h2 id="series-contents">In this series</h2>
+        <ol start="0">
+          
+            
+            
+            <li><a href="/blog/start-here/" aria-current="page">Start here. How C&#43;&#43; verification works</a></li>
+          
+            
+            
+            <li><a href="/blog/demystifying-cpp-proof/">Demystifying C&#43;&#43; proof: verifying a toy program, end to end</a></li>
+          
+            
+            
+            <li><a href="/blog/byte-store/">ByteStore. Builds, tests and edge cases</a></li>
+          
+            
+            
+            <li><a href="/blog/two-levels-of-spec/">Two levels of spec and refinement between them</a></li>
+          
+            
+            
+            <li><a href="/blog/cpp-semantics-and-tooling/">C&#43;&#43; semantics and tooling</a></li>
+          
+            
+            
+            <li><a href="/blog/what-is-proven/">What is proven, what is not. Lifetime, exhaustion, and the boundary of the check</a></li>
+          
+            
+            
+            <li><a href="/blog/harder-cases/">Open challenges. Verifying C&#43;&#43; with formal proof</a></li>
+          
+        </ol>
+      </nav>
+      <div class="prose"><style>
+.diagram{
+  --diagram-bg:#fcfcfb; --diagram-surface:#ffffff; --diagram-surface-2:#f3f4f1;
+  --diagram-ink:#161a18; --diagram-ink-2:#454d49; --diagram-ink-3:#7a837e;
+  --diagram-line:#e2e5e0; --diagram-line-strong:#c9cfc8;
+  --diagram-teal:#0e6b5e; --diagram-teal-light:#e6f2ef;
+  --diagram-rust:#9a3b1e; --diagram-rust-light:#fdf0e9;
+  --diagram-amber:#7a5f00; --diagram-amber-light:#fdf6d8;
+}
+.diagram{margin:14px 0 8px}
+.diagram svg{display:block;width:100%;height:auto}
+.dbox{fill:var(--diagram-surface);stroke:var(--diagram-line-strong)}
+.dtitle{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;font-weight:600;fill:var(--diagram-ink)}
+.dtitle-sans{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:13px;font-weight:600;fill:var(--diagram-ink)}
+.dsub{font-size:10.5px;fill:var(--diagram-ink-3)}
+.darr{stroke:var(--diagram-ink-3);stroke-width:1.5}
+.dstatus{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.st-ok{fill:var(--diagram-teal)} .st-mid{fill:var(--diagram-amber)} .st-open{fill:var(--diagram-rust)}
+@keyframes seqpulse{0%,100%{fill:var(--diagram-surface)}6%{fill:var(--diagram-teal-light)}15%{fill:var(--diagram-surface)}}
+.seq{animation:seqpulse 6.6s ease-in-out infinite}
+@media (prefers-reduced-motion: reduce){.diagram *{animation:none!important}}
+</style>
+<p><strong>Answers.</strong> What this series claims, and how to read it.</p>
+<h2 id="why">Why</h2>
+<ul>
+<li>Tests run the program on selected inputs. Code review reads the source. Neither states what the program must preserve on every execution.</li>
+<li>This series writes that requirement as a spec and checks it with a proof. The proof checks executions that no test runs.</li>
+</ul>
+<h2 id="thesis">Thesis</h2>
+<ul>
+<li>A model states the requirement in a form that Rocq can check. A refinement links the model to the code. All seven posts use one program, ByteStore.</li>
+</ul>
+<h2 id="coverage-and-scope">Coverage and scope</h2>
+<ul>
+<li><strong>Will.</strong> The series verifies one C++17 program from source. The program comes with its spec and its tests. Each claim carries one label: proved, tested, or trusted.</li>
+<li><strong>Scope.</strong> The series covers one property family in one program. It makes no general claim about verified C++.</li>
+</ul>
+<h2 id="who">Who</h2>
+<ul>
+<li>The series is for C++ and security engineers. Post 02 explains how to read the Rocq code.</li>
+</ul>
+<h2 id="run-it">Run it</h2>
+<ul>
+<li><a href="../demystifying-cpp-proof/#repro">Post 01, section 5</a> gives the full repro. Everything is pinned at <a href="https://github.com/evanmak/security-patch-proof/commit/3167bb4b1c63cf9af2307bc1993a2c659a6f0439">commit</a>. See the <a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/artifacts/checked-store/README.md">repro guide</a>.</li>
+</ul>
+<p><strong>Status.</strong> Research in progress.</p>
+<figure class="diagram" style="margin-top:14px">
+    <svg viewBox="0 0 460 472" role="img" aria-label="Verification chain: ByteStore C++ source, cpp2v translation, Rocq lemmas, abstract model. The translation link is assumed; the lemma links are checked. The binary, the concrete standard library, and the whole store lifecycle are not proven and sit outside the chain.">
+      <defs>
+        <marker id="ahC" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--diagram-ink-3)"/></marker>
+      </defs>
+      <rect class="dbox seq" style="animation-duration:4.4s" x="30" y="8" width="400" height="52" rx="8"/>
+      <text class="dtitle" x="46" y="30">ByteStore C++ source</text>
+      <text class="dsub" x="46" y="48">checked_store.hpp, unchanged</text>
+      <line class="darr" x1="230" y1="64" x2="230" y2="100" marker-end="url(#ahC)"/>
+      <text class="dstatus st-mid" x="244" y="86">assumed · trusted base</text>
+      <rect class="dbox seq" style="animation-duration:4.4s;animation-delay:1.1s" x="30" y="104" width="400" height="52" rx="8"/>
+      <text class="dtitle" x="46" y="126">cpp2v translation</text>
+      <text class="dsub" x="46" y="144">BRiCk · emits checked_write.v</text>
+      <line class="darr" x1="230" y1="160" x2="230" y2="196" marker-end="url(#ahC)"/>
+      <text class="dstatus st-ok" x="244" y="182">checked</text>
+      <rect class="dbox seq" style="animation-duration:4.4s;animation-delay:2.2s" x="30" y="200" width="400" height="52" rx="8"/>
+      <text class="dtitle" x="46" y="222">Rocq lemmas</text>
+      <text class="dsub" x="46" y="240">checked_write_refines_model</text>
+      <line class="darr" x1="230" y1="256" x2="230" y2="292" marker-end="url(#ahC)"/>
+      <text class="dstatus st-ok" x="244" y="278">checked</text>
+      <rect class="dbox seq" style="animation-duration:4.4s;animation-delay:3.3s" x="30" y="296" width="400" height="52" rx="8"/>
+      <text class="dtitle" x="46" y="318">Abstract model</text>
+      <text class="dsub" x="46" y="336">Model.write</text>
+      <rect x="30" y="372" width="400" height="84" rx="8" fill="none" stroke="var(--diagram-rust)" stroke-dasharray="5 4"/>
+      <text class="dstatus st-open" x="46" y="396">Not proven · outside the chain</text>
+      <rect x="42" y="408" width="112" height="36" rx="6" fill="var(--diagram-surface)" stroke="var(--diagram-line-strong)" stroke-dasharray="4 3"/>
+      <text class="dsub" x="98" y="430" text-anchor="middle" style="fill:var(--diagram-ink-2)">the binary</text>
+      <rect x="166" y="408" width="140" height="36" rx="6" fill="var(--diagram-surface)" stroke="var(--diagram-line-strong)" stroke-dasharray="4 3"/>
+      <text class="dsub" x="236" y="424" text-anchor="middle" style="fill:var(--diagram-ink-2)">concrete standard</text>
+      <text class="dsub" x="236" y="438" text-anchor="middle" style="fill:var(--diagram-ink-2)">library</text>
+      <rect x="318" y="408" width="100" height="36" rx="6" fill="var(--diagram-surface)" stroke="var(--diagram-line-strong)" stroke-dasharray="4 3"/>
+      <text class="dsub" x="368" y="424" text-anchor="middle" style="fill:var(--diagram-ink-2)">whole store</text>
+      <text class="dsub" x="368" y="438" text-anchor="middle" style="fill:var(--diagram-ink-2)">lifecycle</text>
+    </svg>
+  </figure>
+</div>
+      <nav class="series-pagination" aria-label="Series navigation">
+        
+        
+          
+          <a class="series-next" rel="next" href="/blog/demystifying-cpp-proof/"><span>Next</span>Demystifying C&#43;&#43; proof: verifying a toy program, end to end</a>
+        
+      </nav>
+    
+  </article>
+</main>
+</body>
+</html>

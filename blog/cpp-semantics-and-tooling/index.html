@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>C&#43;&#43; semantics and tooling · Yaohui Chen’s Blog</title>
+  <meta name="description" content="How real C&#43;&#43; becomes Rocq checkable, and what you trust when it does.">
+  <link rel="canonical" href="https://yaohway.github.io/blog/cpp-semantics-and-tooling/">
+  <link rel="stylesheet" href="/blog/blog.css">
+  
+  <link rel="alternate" type="application/rss&#43;xml" href="/blog/index.xml" title="Yaohui Chen’s Blog">
+  
+</head>
+<body>
+  <header>
+    <a class="author" href="/">Yaohui Chen</a>
+    <nav aria-label="Blog navigation">
+      <a href="/blog/">Blog</a>
+      
+        
+          <a href="/blog/series/">Series</a>
+        
+      
+        
+          <a href="/blog/tags/">Tags</a>
+        
+      
+      <a href="/blog/index.xml">RSS</a>
+    </nav>
+  </header>
+  <main>
+  <article>
+    <time datetime="2026-11-20T00:00:00Z">20 November 2026</time>
+    <h1>C&#43;&#43; semantics and tooling</h1>
+    <p class="summary">How real C++ becomes Rocq checkable, and what you trust when it does.</p>
+    <dl class="metadata">
+      
+        
+        
+          <div>
+            <dt>Series</dt>
+            <dd><a href="/blog/series/how-c&#43;&#43;-verification-works/">How C&#43;&#43; verification works</a></dd>
+          </div>
+        
+      
+        
+        
+          <div>
+            <dt>Tags</dt>
+            <dd><a href="/blog/tags/cpp/">Cpp</a>, <a href="/blog/tags/brick/">Brick</a>, <a href="/blog/tags/tooling/">Tooling</a>, <a href="/blog/tags/rocq/">Rocq</a></dd>
+          </div>
+        
+      
+    </dl>
+    
+    
+    
+      
+      
+      <nav class="series-nav" aria-labelledby="series-contents">
+        <h2 id="series-contents">In this series</h2>
+        <ol start="0">
+          
+            
+            
+            <li><a href="/blog/start-here/">Start here. How C&#43;&#43; verification works</a></li>
+          
+            
+            
+            <li><a href="/blog/demystifying-cpp-proof/">Demystifying C&#43;&#43; proof: verifying a toy program, end to end</a></li>
+          
+            
+            
+            <li><a href="/blog/byte-store/">ByteStore. Builds, tests and edge cases</a></li>
+          
+            
+            
+            <li><a href="/blog/two-levels-of-spec/">Two levels of spec and refinement between them</a></li>
+          
+            
+            
+            <li><a href="/blog/cpp-semantics-and-tooling/" aria-current="page">C&#43;&#43; semantics and tooling</a></li>
+          
+            
+            
+            <li><a href="/blog/what-is-proven/">What is proven, what is not. Lifetime, exhaustion, and the boundary of the check</a></li>
+          
+            
+            
+            <li><a href="/blog/harder-cases/">Open challenges. Verifying C&#43;&#43; with formal proof</a></li>
+          
+        </ol>
+      </nav>
+      <div class="prose"><p>This series verifies one small C++ program end to end: ByteStore.</p>
+<p><strong>Answers.</strong> How real C++ becomes Rocq checkable, and what you trust when it does.</p>
+<h2 id="1-translation-with-cpp2v">1. Translation with cpp2v</h2>
+<ul>
+<li>SkyLabs cpp2v is part of BRiCk. Clang reads the exact unchanged source. cpp2v emits a Rocq syntax tree, <code>checked_write.v</code>. Translation ran on Linux ARM64 with libstdc++.</li>
+<li>cpp2v reads existing C++. All of the C++ comes from the source file. Claims cover source. The compiled binary sits outside them.</li>
+<li>Toolchain versions are pinned in <a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/artifacts/checked-store/PUBLIC-PINS.tsv"><code>PUBLIC-PINS.tsv</code></a>. Source is <a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/checked_store.hpp"><code>checked_store.hpp</code></a> at the pinned commit.</li>
+</ul>
+<h2 id="2-what-is-checked-at-this-layer">2. What is checked at this layer</h2>
+<ul>
+<li>Checked lemmas identify the actual <code>write</code> body and establish: method entry, the guard rule for short-circuit evaluation, boolean operands, branch and return structure, parameter binding and cleanup, and C++17 assignment evaluation order.</li>
+<li>A library contract interface at signature level typechecks. Contracts themselves stay unproved.</li>
+<li><a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/brick-write-proof/WriteRefinement.v"><code>WriteRefinement.checked_write_refines_model</code></a> is independently checked in Rocq. The translated C++ write agrees with <code>Model.write</code> on return result and full model-observable post-state, on the modeled normal-return paths, under explicit representation and map, vector, and iterator contract assumptions. Record: <a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/brick-write-proof/FULL-VERIFICATION.md"><code>FULL-VERIFICATION.md</code></a>. Proof modules: <a href="https://github.com/evanmak/security-patch-proof/tree/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/brick-write-proof">brick-write-proof</a>.</li>
+<li>An issue in the independent checker step was found during validation and resolved in the checking workflow, with the checker itself left unpatched.</li>
+</ul>
+<h2 id="3-trust-base-in-full">3. Trust base in full</h2>
+<ul>
+<li><code>Print Assumptions</code> on the generated constants reports: assumed guardedness of upstream <code>compare.compareN</code>, the <code>compare.name_comparison</code> axiom, classical and dependent functional extensionality, and built-in string and integer types and operations.</li>
+<li>Whole graph <code>rocqchk -o</code> also reports upstream axioms and seven unsafe fixpoints and cofixpoints in syntax comparison. The report shows no type in type and no assumed positivity.</li>
+<li>Post 01 section 3 adds BRiCk semantics, the compiler, and STL contracts. The AST check depends on this base, axioms included.</li>
+</ul>
+<p><strong>Sources:</strong> <a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/artifacts/checked-store/PUBLIC-PINS.tsv">PUBLIC-PINS.tsv</a> · <a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/brick-write-proof/FULL-VERIFICATION.md">FULL-VERIFICATION.md</a>.</p>
+</div>
+      <nav class="series-pagination" aria-label="Series navigation">
+        
+          
+          <a class="series-prev" rel="prev" href="/blog/two-levels-of-spec/"><span>Previous</span>Two levels of spec and refinement between them</a>
+        
+        
+          
+          <a class="series-next" rel="next" href="/blog/what-is-proven/"><span>Next</span>What is proven, what is not. Lifetime, exhaustion, and the boundary of the check</a>
+        
+      </nav>
+    
+  </article>
+</main>
+</body>
+</html>

@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>What is proven, what is not. Lifetime, exhaustion, and the boundary of the check · Yaohui Chen’s Blog</title>
+  <meta name="description" content="What the proof establishes, and where it stops.">
+  <link rel="canonical" href="https://yaohway.github.io/blog/what-is-proven/">
+  <link rel="stylesheet" href="/blog/blog.css">
+  
+  <link rel="alternate" type="application/rss&#43;xml" href="/blog/index.xml" title="Yaohui Chen’s Blog">
+  
+</head>
+<body>
+  <header>
+    <a class="author" href="/">Yaohui Chen</a>
+    <nav aria-label="Blog navigation">
+      <a href="/blog/">Blog</a>
+      
+        
+          <a href="/blog/series/">Series</a>
+        
+      
+        
+          <a href="/blog/tags/">Tags</a>
+        
+      
+      <a href="/blog/index.xml">RSS</a>
+    </nav>
+  </header>
+  <main>
+  <article>
+    <time datetime="2026-11-20T00:00:00Z">20 November 2026</time>
+    <h1>What is proven, what is not. Lifetime, exhaustion, and the boundary of the check</h1>
+    <p class="summary">What the proof establishes, and where it stops.</p>
+    <dl class="metadata">
+      
+        
+        
+          <div>
+            <dt>Series</dt>
+            <dd><a href="/blog/series/how-c&#43;&#43;-verification-works/">How C&#43;&#43; verification works</a></dd>
+          </div>
+        
+      
+        
+        
+          <div>
+            <dt>Tags</dt>
+            <dd><a href="/blog/tags/verification/">Verification</a>, <a href="/blog/tags/lifetime/">Lifetime</a>, <a href="/blog/tags/specs/">Specs</a></dd>
+          </div>
+        
+      
+    </dl>
+    
+    
+    
+      
+      
+      <nav class="series-nav" aria-labelledby="series-contents">
+        <h2 id="series-contents">In this series</h2>
+        <ol start="0">
+          
+            
+            
+            <li><a href="/blog/start-here/">Start here. How C&#43;&#43; verification works</a></li>
+          
+            
+            
+            <li><a href="/blog/demystifying-cpp-proof/">Demystifying C&#43;&#43; proof: verifying a toy program, end to end</a></li>
+          
+            
+            
+            <li><a href="/blog/byte-store/">ByteStore. Builds, tests and edge cases</a></li>
+          
+            
+            
+            <li><a href="/blog/two-levels-of-spec/">Two levels of spec and refinement between them</a></li>
+          
+            
+            
+            <li><a href="/blog/cpp-semantics-and-tooling/">C&#43;&#43; semantics and tooling</a></li>
+          
+            
+            
+            <li><a href="/blog/what-is-proven/" aria-current="page">What is proven, what is not. Lifetime, exhaustion, and the boundary of the check</a></li>
+          
+            
+            
+            <li><a href="/blog/harder-cases/">Open challenges. Verifying C&#43;&#43; with formal proof</a></li>
+          
+        </ol>
+      </nav>
+      <div class="prose"><p><strong>Answers.</strong> What the proof establishes, and where it stops.</p>
+<h2 id="1-four-properties">1. Four properties</h2>
+<p>Four statements define what the verification has to establish for ByteStore:</p>
+<ul>
+<li><strong>Spatial property.</strong> The offset is checked against the length of the live buffer.</li>
+<li><strong>Temporal property.</strong> Missing or retired IDs are rejected.</li>
+<li><strong>State preservation.</strong> A refused operation leaves the full state unchanged.</li>
+<li><strong>Precise success effect.</strong> A successful write changes exactly one byte.</li>
+</ul>
+<p>Only ByteStore is covered, and only in its specified form.</p>
+<h2 id="2-layers-of-evidence">2. Layers of evidence</h2>
+<ul>
+<li>Judging the claim uses model theorems from Post 02, simulation across the refinement from Post 03, translation checks from Post 04, and tests and sanitizers.</li>
+<li>The judgement also audits assumptions. The audit reads the <code>Print Assumptions</code> output, confirms there is no <code>Admitted</code>, and restates the claim boundary.</li>
+<li>Keep three claims separate: model proof, C++ conformance tests, and source refinement. Sections 3 and 4 cover model proof.</li>
+</ul>
+<h2 id="3-overflow-in-three-steps">3. Overflow, in three steps</h2>
+<ol>
+<li><strong>Write path.</strong> Post 02&rsquo;s code and spec compare offset and size directly, with no arithmetic on offsets. The formal write spec requires a representable offset. The library contract requires a representable buffer length. Under those stated assumptions, the checked refinement in Post 04 covers the write.</li>
+<li><strong>Allocation counter.</strong> Post 02&rsquo;s spec constrains allocation to fail closed before increment or wrap. The counter is checked against the limit before it increments. Post 03&rsquo;s model proves exhaustion.</li>
+<li><strong>Boundary.</strong> The C++ allocation path sits outside the write refinement. The counter guarantee rests on the spec constraint and the model. The checked C++ refinement covers the write path only.</li>
+</ol>
+<p>On the paths these steps cover, overflow does not occur.</p>
+<h2 id="4-lifetime-and-exhaustion">4. Lifetime and exhaustion</h2>
+<p>One write decides the spatial property. Compare the offset with the length of the live buffer. No single operation decides the temporal property. Whether an identity is still valid depends on the whole history of allocations and releases behind it.</p>
+<p>Two results close the temporal half at the model level, for the implementation-shaped model of Post 03:</p>
+<ul>
+<li><strong>Lifetime.</strong> Once an identity is released, it stays invalid under any later sequence of model operations. Reads through it return nothing. Writes through it are rejected. A second release is rejected. Each rejected operation leaves the state unchanged.</li>
+<li><strong>Exhaustion.</strong> Once allocation reaches the identity limit, no later operation restores it. Releasing a buffer frees the buffer. It does not recycle the identity.</li>
+</ul>
+<p>Both results are Rocq theorems, and their <code>Print Assumptions</code> reports are closed under the global context. The allocate and release paths of the C++ code sit outside the checked refinement of Post 04. The temporal half is proven for the model and stated for the code. The code itself sits outside the check.</p>
+<p><strong>Sources:</strong> <a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/SPEC.md">SPEC.md</a>.</p>
+</div>
+      <nav class="series-pagination" aria-label="Series navigation">
+        
+          
+          <a class="series-prev" rel="prev" href="/blog/cpp-semantics-and-tooling/"><span>Previous</span>C&#43;&#43; semantics and tooling</a>
+        
+        
+          
+          <a class="series-next" rel="next" href="/blog/harder-cases/"><span>Next</span>Open challenges. Verifying C&#43;&#43; with formal proof</a>
+        
+      </nav>
+    
+  </article>
+</main>
+</body>
+</html>

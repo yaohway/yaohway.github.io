@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Two levels of spec and refinement between them · Yaohui Chen’s Blog</title>
+  <meta name="description" content="How the high level and implementation level specs connect, and what the proof between them gives.">
+  <link rel="canonical" href="https://yaohway.github.io/blog/two-levels-of-spec/">
+  <link rel="stylesheet" href="/blog/blog.css">
+  
+  <link rel="alternate" type="application/rss&#43;xml" href="/blog/index.xml" title="Yaohui Chen’s Blog">
+  
+</head>
+<body>
+  <header>
+    <a class="author" href="/">Yaohui Chen</a>
+    <nav aria-label="Blog navigation">
+      <a href="/blog/">Blog</a>
+      
+        
+          <a href="/blog/series/">Series</a>
+        
+      
+        
+          <a href="/blog/tags/">Tags</a>
+        
+      
+      <a href="/blog/index.xml">RSS</a>
+    </nav>
+  </header>
+  <main>
+  <article>
+    <time datetime="2026-11-20T00:00:00Z">20 November 2026</time>
+    <h1>Two levels of spec and refinement between them</h1>
+    <p class="summary">How the high level and implementation level specs connect, and what the proof between them gives.</p>
+    <dl class="metadata">
+      
+        
+        
+          <div>
+            <dt>Series</dt>
+            <dd><a href="/blog/series/how-c&#43;&#43;-verification-works/">How C&#43;&#43; verification works</a></dd>
+          </div>
+        
+      
+        
+        
+          <div>
+            <dt>Tags</dt>
+            <dd><a href="/blog/tags/rocq/">Rocq</a>, <a href="/blog/tags/refinement/">Refinement</a>, <a href="/blog/tags/formal-verification/">Formal-Verification</a></dd>
+          </div>
+        
+      
+    </dl>
+    
+    
+    
+      
+      
+      <nav class="series-nav" aria-labelledby="series-contents">
+        <h2 id="series-contents">In this series</h2>
+        <ol start="0">
+          
+            
+            
+            <li><a href="/blog/start-here/">Start here. How C&#43;&#43; verification works</a></li>
+          
+            
+            
+            <li><a href="/blog/demystifying-cpp-proof/">Demystifying C&#43;&#43; proof: verifying a toy program, end to end</a></li>
+          
+            
+            
+            <li><a href="/blog/byte-store/">ByteStore. Builds, tests and edge cases</a></li>
+          
+            
+            
+            <li><a href="/blog/two-levels-of-spec/" aria-current="page">Two levels of spec and refinement between them</a></li>
+          
+            
+            
+            <li><a href="/blog/cpp-semantics-and-tooling/">C&#43;&#43; semantics and tooling</a></li>
+          
+            
+            
+            <li><a href="/blog/what-is-proven/">What is proven, what is not. Lifetime, exhaustion, and the boundary of the check</a></li>
+          
+            
+            
+            <li><a href="/blog/harder-cases/">Open challenges. Verifying C&#43;&#43; with formal proof</a></li>
+          
+        </ol>
+      </nav>
+      <div class="prose"><style>
+.diagram{
+  --diagram-bg:#fcfcfb; --diagram-surface:#ffffff; --diagram-surface-2:#f3f4f1;
+  --diagram-ink:#161a18; --diagram-ink-2:#454d49; --diagram-ink-3:#7a837e;
+  --diagram-line:#e2e5e0; --diagram-line-strong:#c9cfc8;
+  --diagram-teal:#0e6b5e; --diagram-teal-light:#e6f2ef;
+  --diagram-rust:#9a3b1e; --diagram-rust-light:#fdf0e9;
+  --diagram-amber:#7a5f00; --diagram-amber-light:#fdf6d8;
+}
+.diagram{margin:14px 0 8px}
+.diagram svg{display:block;width:100%;height:auto}
+.dbox{fill:var(--diagram-surface);stroke:var(--diagram-line-strong)}
+.dtitle{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;font-weight:600;fill:var(--diagram-ink)}
+.dtitle-sans{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:13px;font-weight:600;fill:var(--diagram-ink)}
+.dsub{font-size:10.5px;fill:var(--diagram-ink-3)}
+.darr{stroke:var(--diagram-ink-3);stroke-width:1.5}
+.dstatus{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.st-ok{fill:var(--diagram-teal)} .st-mid{fill:var(--diagram-amber)} .st-open{fill:var(--diagram-rust)}
+@keyframes dropdot{0%{transform:translateY(0);opacity:0}12%{opacity:1}55%{transform:translateY(84px);opacity:1}66%,100%{transform:translateY(84px);opacity:0}}
+.traveldot{opacity:0;animation:dropdot 4.5s ease-in-out infinite}
+@keyframes relpulse{0%,58%{opacity:.3}74%,92%{opacity:1}100%{opacity:.3}}
+.relpulse{animation:relpulse 4.5s ease-in-out infinite}
+@media (prefers-reduced-motion: reduce){.diagram *{animation:none!important}.traveldot{display:none}}
+</style>
+<p>This series verifies one small C++ program end to end: ByteStore.</p>
+<p><strong>Answers.</strong> How the high level and implementation level specs connect, and what the proof between them gives.</p>
+<h2 id="1-two-levels-two-jobs">1. Two levels, two jobs</h2>
+<ul>
+<li><a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/SPEC.md">SPEC.md</a> states what must hold in security terms; the implementation level states preconditions, postconditions, and invariants close to code. The high level sits too far from code to check. The implementation level alone says little about security.</li>
+</ul>
+<h2 id="2-two-models-of-the-same-store">2. Two models of the same store</h2>
+<ul>
+<li><strong>Abstract</strong> model (<a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/Model.v">Model.v</a>): a dense list of optional buffers, tombstones for released slots. Simple to state properties over; wasteful as a data structure.</li>
+<li><strong>Implementation-shaped</strong> model (<a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/Representation.v">Representation.v</a>, 291 lines): an <code>FMapList</code> over <code>nat</code> that stores only live entries, with explicit <code>sparse_limit</code> and <code>sparse_next</code>. The shape matches the C++ <code>std::map</code>.</li>
+<li>The counter records allocation history; map size counts live entries only, so it can sit below the counter.</li>
+</ul>
+<h2 id="3-relation-between-abstract-and-implementation-shaped">3. Relation between abstract and implementation-shaped</h2>
+<ul>
+<li><code>related s m</code> is a record of three equations: <code>sparse_limit m = limit s</code> · <code>sparse_next m = next_id s</code> · <code>∀ id, sparse_lookup m id = lookup s id</code>.</li>
+<li><code>empty_related</code> states that the empty stores are related. <code>related_well_formed</code> states that related stores within the limit give a well-formed map. A well-formed map has no duplicate keys. Every live ID is below <code>sparse_next</code>.</li>
+</ul>
+<h2 id="4-simulation-return-values-and-post-states">4. Simulation. Return values and post states</h2>
+<figure class="diagram">
+      <svg viewBox="0 0 560 250" role="img" aria-label="Refinement diagram: the abstract model and the implementation-shaped model start related; write runs on both sides; both sides return the same result and end related.">
+        <defs>
+          <marker id="ahS" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--diagram-ink-3)"/></marker>
+        </defs>
+        <rect class="dbox" x="10" y="16" width="230" height="58" rx="8"/>
+        <text class="dtitle-sans" x="26" y="40">Abstract model</text>
+        <text class="dsub" x="26" y="58">Model.v · store s</text>
+        <rect class="dbox" x="320" y="16" width="230" height="58" rx="8"/>
+        <text class="dtitle-sans" x="336" y="40">Implementation-shaped model</text>
+        <text class="dsub" x="336" y="58">Representation.v · sparse store m</text>
+        <text class="dsub" x="280" y="34" text-anchor="middle" style="font-size:11.5px;fill:var(--diagram-teal);font-weight:600">related</text>
+        <line class="darr" x1="242" y1="45" x2="318" y2="45" marker-start="url(#ahS)" marker-end="url(#ahS)"/>
+        <line class="darr" x1="125" y1="78" x2="125" y2="170" marker-end="url(#ahS)"/>
+        <text class="dsub" x="137" y="128" style="font-size:11.5px">write</text>
+        <line class="darr" x1="435" y1="78" x2="435" y2="170" marker-end="url(#ahS)"/>
+        <text class="dsub" x="447" y="128" style="font-size:11.5px">write</text>
+        <circle class="traveldot" cx="125" cy="84" r="3.5" fill="var(--diagram-teal)"/>
+        <circle class="traveldot" cx="435" cy="84" r="3.5" fill="var(--diagram-teal)"/>
+        <rect class="dbox" x="10" y="176" width="230" height="58" rx="8"/>
+        <text class="dtitle-sans" x="26" y="200">Abstract model</text>
+        <text class="dsub" x="26" y="218">store s′ after write</text>
+        <rect class="dbox" x="320" y="176" width="230" height="58" rx="8"/>
+        <text class="dtitle-sans" x="336" y="200">Implementation-shaped model</text>
+        <text class="dsub" x="336" y="218">sparse store m′ after write</text>
+        <g class="relpulse">
+          <text class="dsub" x="280" y="194" text-anchor="middle" style="font-size:11.5px;fill:var(--diagram-teal);font-weight:600">related</text>
+          <line class="darr" x1="242" y1="205" x2="318" y2="205" marker-start="url(#ahS)" marker-end="url(#ahS)" style="stroke:var(--diagram-teal)"/>
+        </g>
+      </svg>
+    </figure>
+<p>One shape, four theorems: <code>write_simulation</code> · <code>read_simulation</code> · <code>release_simulation</code> · <code>allocate_simulation</code>. Same result on both sides; both sides end related.</p>
+<ul>
+<li><code>history_simulation</code> folds the same shape over any finite operation history. Replies and final states match throughout.</li>
+<li><code>rejected_sparse_write</code> states that a write in the implementation-shaped model returning <code>false</code> is exactly <code>(false, m)</code>. Rejection is stateless on both sides.</li>
+<li>Write in the implementation-shaped model goes through <code>put_byte</code>, which returns <code>None</code> out of bounds.</li>
+</ul>
+<h2 id="5-benefits-and-limits">5. Benefits and limits</h2>
+<h3 id="benefits">Benefits</h3>
+<ul>
+<li>The simulation theorems match each operation on the implementation-shaped model to the abstract model, with the same result and post-state.</li>
+</ul>
+<h3 id="limits">Limits</h3>
+<ul>
+<li>C++ sits outside this proof; model and code connect by translation and partial lemmas. See Post 04.</li>
+<li>Write refinement is checked (Post 04; <a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/brick-write-proof/FULL-VERIFICATION.md">verification record</a>). The binary, the concrete standard library, and the whole lifecycle stay open.</li>
+</ul>
+<p><strong>Sources:</strong> <a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/Representation.v">Representation.v</a> · <a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/Model.v">Model.v</a> · <a href="https://github.com/evanmak/security-patch-proof/blob/3167bb4b1c63cf9af2307bc1993a2c659a6f0439/experiments/03-memory-safety/SPEC.md">SPEC.md</a>.</p>
+</div>
+      <nav class="series-pagination" aria-label="Series navigation">
+        
+          
+          <a class="series-prev" rel="prev" href="/blog/byte-store/"><span>Previous</span>ByteStore. Builds, tests and edge cases</a>
+        
+        
+          
+          <a class="series-next" rel="next" href="/blog/cpp-semantics-and-tooling/"><span>Next</span>C&#43;&#43; semantics and tooling</a>
+        
+      </nav>
+    
+  </article>
+</main>
+</body>
+</html>
